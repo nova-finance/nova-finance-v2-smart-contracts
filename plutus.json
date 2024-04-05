@@ -1,0 +1,288 @@
+{
+  "preamble": {
+    "title": "cherryland/cherryland-lending",
+    "description": "Aiken contracts for project 'cherryland/cherryland-lending'",
+    "version": "0.0.0",
+    "plutusVersion": "v2",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.0.25-alpha+4e8042f"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "collateral.loan",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/types~1CollaeralDatum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/collateral~1Redeemer"
+        }
+      },
+      "compiledCode": "59019a0100003232323232322323223225333007325333008300630093754600260146ea8010528099199119198008008019129998080008a50132533300e3371e6eb8c04800801052889980180180098090009bac3001300b3754600460166ea800cdd7180098059baa0082300d300e300e300e300e300e300e300e300e0012300c00114984d9594ccc014c00cc018dd5000899192999805180600109924c64a666010600c0022a66601660146ea800852616153330083370e90010008a99980598051baa00214985858c020dd50008b180500098039baa001163253330043002300537540062646464646464646464646464646464646464a6660326036004264646493180a805980a00718098088b1bae30190013019002375a602e002602e0046eb4c054004c054008dd698098009809801180880098088011bad300f001300f002300d001300d002375a601600260160046012002600c6ea800c5894ccc010c008c014dd5000899191919299980598068010a4c2c6eb8c02c004c02c008dd7180480098031baa00116370e90002b9a5573aaae7955cfaba157441",
+      "hash": "1c57b2a50c226fa4f14b9d13cee8f4b7ec9c3773737152aa86d4bfaa"
+    },
+    {
+      "title": "interest.interest",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/types~1InterestDatum"
+        }
+      },
+      "redeemer": {
+        "title": "_redeemer",
+        "schema": {
+          "$ref": "#/definitions/interest~1Redeemer"
+        }
+      },
+      "compiledCode": "58c401000032323232323223223225333006323322323300100100322533300e00114a0264a66601866e3cdd718080010020a511330030030013010001375860166018601860186018601860186018601860126ea8c004c024dd50011bae30013009375400c4601600229309b2b299980219b8748000c014dd500089919299980498058010a4c2c6eb4c024004c018dd50008b299980119b8748000c00cdd500089919299980398048010a4c2c6eb8c01c004c010dd50008b2b9a5573aaae7955cfaba157441",
+      "hash": "7f7cdf8b08d264a703c26e7a8e1ee7b98a2b650267ee84dfec96305b"
+    },
+    {
+      "title": "loan.loan",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/types~1LoanOfferDatum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/loan~1Redeemer"
+        }
+      },
+      "compiledCode": "59019d01000032323232323223232232253330073253330083370e900118049baa3001300a375400829404c8cc88c8cc00400400c894ccc040004528099299980719b8f375c602400400829444cc00c00c004c048004dd6180098059baa3002300b37540066eb8c004c02cdd50041180698071807180718071807180718071807000918060008a4c26caca66600a6006600c6ea80044c8c94ccc028c0300084c92632533300830060011533300b300a37540042930b0a99980419b874800800454ccc02cc028dd50010a4c2c2c60106ea800458c028004c01cdd50008b192999802180118029baa00313232323232323232323232323232323232325333019301b0021323232498c05402cc050038c04c04458dd7180c800980c8011bad30170013017002375a602a002602a0046eb4c04c004c04c008c044004c044008dd698078009807801180680098068011bad300b001300b0023009001300637540062c4a6660086004600a6ea80044c8c8c8c94ccc02cc03400852616375c601600260160046eb8c024004c018dd50008b1b87480015cd2ab9d5573caae7d5d0aba201",
+      "hash": "e00fc9c952ff4af62f8b294d6a697d753b150cbc6531b3c3d5642d71"
+    }
+  ],
+  "definitions": {
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "collateral/CollateralRedeemer": {
+      "title": "CollateralRedeemer",
+      "anyOf": [
+        {
+          "title": "PayBackLoan",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "LiquidateCollateral",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "collateral/Redeemer": {
+      "title": "Redeemer",
+      "anyOf": [
+        {
+          "title": "Redeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "action",
+              "$ref": "#/definitions/collateral~1CollateralRedeemer"
+            }
+          ]
+        }
+      ]
+    },
+    "interest/Redeemer": {
+      "title": "Redeemer",
+      "anyOf": [
+        {
+          "title": "Redeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "action",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "loan/LoanRedeemer": {
+      "title": "LoanRedeemer",
+      "anyOf": [
+        {
+          "title": "CancelLoan",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "GetLoan",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "loan/Redeemer": {
+      "title": "Redeemer",
+      "anyOf": [
+        {
+          "title": "Redeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "action",
+              "$ref": "#/definitions/loan~1LoanRedeemer"
+            }
+          ]
+        }
+      ]
+    },
+    "types/AssetClass": {
+      "title": "AssetClass",
+      "anyOf": [
+        {
+          "title": "AssetClass",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "policy_id",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "asset_name",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "types/CollaeralDatum": {
+      "title": "CollaeralDatum",
+      "anyOf": [
+        {
+          "title": "CollaeralDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "loan_asset",
+              "$ref": "#/definitions/types~1AssetClass"
+            },
+            {
+              "title": "loan_amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "interest_asset",
+              "$ref": "#/definitions/types~1AssetClass"
+            },
+            {
+              "title": "interest_amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "collateral_asset",
+              "$ref": "#/definitions/types~1AssetClass"
+            },
+            {
+              "title": "collateral_amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "loan_duration",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "liquidation_commision",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "lender_address_hash",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "types/InterestDatum": {
+      "title": "InterestDatum",
+      "anyOf": [
+        {
+          "title": "InterestDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "lender_address_hash",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "types/LoanOfferDatum": {
+      "title": "LoanOfferDatum",
+      "anyOf": [
+        {
+          "title": "LoanOfferDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "loan_asset",
+              "$ref": "#/definitions/types~1AssetClass"
+            },
+            {
+              "title": "loan_amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "interest_asset",
+              "$ref": "#/definitions/types~1AssetClass"
+            },
+            {
+              "title": "interest_amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "collateral_asset",
+              "$ref": "#/definitions/types~1AssetClass"
+            },
+            {
+              "title": "collateral_amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "loan_duration",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "liquidation_commision",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "lender_address_hash",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
