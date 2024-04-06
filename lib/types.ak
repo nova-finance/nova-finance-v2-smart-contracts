@@ -29,6 +29,7 @@ pub type CollaeralDatum {
   collateral_asset: AssetClass,
   collateral_amount: Int,
   loan_duration: POSIXTime,
+  lend_time: POSIXTime,
   liquidation_commision: Int,
   lender_address_hash: Hash<Blake2b_224, VerificationKey>,
 }
