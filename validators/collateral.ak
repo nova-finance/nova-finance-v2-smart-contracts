@@ -1,33 +1,34 @@
 use aiken/list
 use aiken/transaction.{ScriptContext}
 use types.{CollaeralDatum}
+use utils
 
 type CollateralRedeemer {
   PayBackLoan
   LiquidateCollateral
 }
 
-type Redeemer {
-  action: CollateralRedeemer,
-}
-
 validator {
   fn loan(
     datum: CollaeralDatum,
-    redeemer: Redeemer,
+    redeemer: CollateralRedeemer,
     context: ScriptContext,
   ) -> Bool {
-    when redeemer.action is {
+    when redeemer is {
       // todo
       PayBackLoan -> False
-      // Check original lender is signing the transaction
+      // Check original lender is signing the transaction 
       LiquidateCollateral -> {
         let must_be_signed_by_lender =
           list.has(
             context.transaction.extra_signatories,
             datum.lender_address_hash,
           )
-        must_be_signed_by_lender
+        let deadline_passed =
+          datum.loan_duration + datum.lend_time < utils.get_lower_bound(
+            context.transaction.validity_range,
+          )
+        must_be_signed_by_lender && deadline_passed
       }
     }
   }

@@ -3,25 +3,21 @@ use aiken/transaction.{ScriptContext}
 use types.{LoanOfferDatum}
 
 type LoanRedeemer {
-  CancelLoan
   GetLoan
-}
-
-type Redeemer {
-  action: LoanRedeemer,
+  CancelRequest
 }
 
 validator {
   fn loan(
     datum: LoanOfferDatum,
-    redeemer: Redeemer,
+    redeemer: LoanRedeemer,
     context: ScriptContext,
   ) -> Bool {
-    when redeemer.action is {
+    when redeemer is {
       // todo
       GetLoan -> False
       // Check original lender is signing the transaction
-      CancelLoan -> {
+      CancelRequest -> {
         let must_be_signed_by_lender =
           list.has(
             context.transaction.extra_signatories,
