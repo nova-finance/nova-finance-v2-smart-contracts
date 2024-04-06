@@ -56,11 +56,11 @@
       "redeemer": {
         "title": "redeemer",
         "schema": {
-          "$ref": "#/definitions/loan~1Redeemer"
+          "$ref": "#/definitions/loan~1RequestRedeemer"
         }
       },
-      "compiledCode": "59019d01000032323232323223232232253330073253330083370e900118049baa3001300a375400829404c8cc88c8cc00400400c894ccc040004528099299980719b8f375c602400400829444cc00c00c004c048004dd6180098059baa3002300b37540066eb8c004c02cdd50041180698071807180718071807180718071807000918060008a4c26caca66600a6006600c6ea80044c8c94ccc028c0300084c92632533300830060011533300b300a37540042930b0a99980419b874800800454ccc02cc028dd50010a4c2c2c60106ea800458c028004c01cdd50008b192999802180118029baa00313232323232323232323232323232323232325333019301b0021323232498c05402cc050038c04c04458dd7180c800980c8011bad30170013017002375a602a002602a0046eb4c04c004c04c008c044004c044008dd698078009807801180680098068011bad300b001300b0023009001300637540062c4a6660086004600a6ea80044c8c8c8c94ccc02cc03400852616375c601600260160046eb8c024004c018dd50008b1b87480015cd2ab9d5573caae7d5d0aba201",
-      "hash": "e00fc9c952ff4af62f8b294d6a697d753b150cbc6531b3c3d5642d71"
+      "compiledCode": "59016b0100003232323232322323223225333007533300730053008375400629404cc88c8cc00400400c894ccc038004528099299980619b8f375c602000400829444cc00c00c004c040004dd618059806180618061806180618061806180618049baa300b300937540026eb8c02cc030c030c030c030c030c030c030c024dd50030a4c26cac64a66600c60080022a66601260106ea800852616153330063370e90010008a99980498041baa00214985858c018dd5000992999802180118029baa003132323232323232323232323232323232533301730190021323232498c04c024c048030c04403c58dd7180b800980b8011bad30150013015002375a60260026026004602200260220046eb4c03c004c03c008c034004c034008dd698058009805801180480098031baa0031625333004300230053754002264646464a666016601a0042930b1bae300b001300b002375c6012002600c6ea800458dc3a4000ae6955ceaab9e5573eae855d11",
+      "hash": "76ce89bbbc2e693545330ba17d287c95bada532c78a07b5904466580"
     }
   ],
   "definitions": {
@@ -119,36 +119,20 @@
         }
       ]
     },
-    "loan/LoanRedeemer": {
-      "title": "LoanRedeemer",
+    "loan/RequestRedeemer": {
+      "title": "RequestRedeemer",
       "anyOf": [
         {
-          "title": "CancelLoan",
+          "title": "GetLoan",
           "dataType": "constructor",
           "index": 0,
           "fields": []
         },
         {
-          "title": "GetLoan",
+          "title": "CancelRequest",
           "dataType": "constructor",
           "index": 1,
           "fields": []
-        }
-      ]
-    },
-    "loan/Redeemer": {
-      "title": "Redeemer",
-      "anyOf": [
-        {
-          "title": "Redeemer",
-          "dataType": "constructor",
-          "index": 0,
-          "fields": [
-            {
-              "title": "action",
-              "$ref": "#/definitions/loan~1LoanRedeemer"
-            }
-          ]
         }
       ]
     },
@@ -245,11 +229,11 @@
           "index": 0,
           "fields": [
             {
-              "title": "loan_asset",
+              "title": "collateral_asset",
               "$ref": "#/definitions/types~1AssetClass"
             },
             {
-              "title": "loan_amount",
+              "title": "collateral_amount",
               "$ref": "#/definitions/Int"
             },
             {
@@ -261,19 +245,15 @@
               "$ref": "#/definitions/Int"
             },
             {
-              "title": "collateral_asset",
+              "title": "loan_asset",
               "$ref": "#/definitions/types~1AssetClass"
             },
             {
-              "title": "collateral_amount",
+              "title": "loan_amount",
               "$ref": "#/definitions/Int"
             },
             {
               "title": "loan_duration",
-              "$ref": "#/definitions/Int"
-            },
-            {
-              "title": "liquidation_commision",
               "$ref": "#/definitions/Int"
             },
             {

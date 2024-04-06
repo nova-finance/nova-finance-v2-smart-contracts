@@ -7,17 +7,13 @@ type CollateralRedeemer {
   LiquidateCollateral
 }
 
-type Redeemer {
-  action: CollateralRedeemer,
-}
-
 validator {
   fn loan(
     datum: CollaeralDatum,
-    redeemer: Redeemer,
+    redeemer: CollateralRedeemer,
     context: ScriptContext,
   ) -> Bool {
-    when redeemer.action is {
+    when redeemer is {
       // todo
       PayBackLoan -> False
       // Check original lender is signing the transaction

@@ -11,14 +11,13 @@ pub type AssetClass {
 }
 
 pub type LoanOfferDatum {
-  loan_asset: AssetClass,
-  loan_amount: Int,
-  interest_asset: AssetClass,
-  interest_amount: Int,
   collateral_asset: AssetClass,
   collateral_amount: Int,
+  interest_asset: AssetClass,
+  interest_amount: Int,
+  loan_asset: AssetClass,
+  loan_amount: Int,
   loan_duration: POSIXTime,
-  liquidation_commision: Int,
   lender_address_hash: Hash<Blake2b_224, VerificationKey>,
 }
 
