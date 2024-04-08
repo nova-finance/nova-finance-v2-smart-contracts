@@ -1,6 +1,6 @@
 use aiken/list
 use aiken/transaction.{ScriptContext}
-use types.{CollaeralDatum}
+use types.{CollateralDatum}
 use utils
 
 type CollateralRedeemer {
@@ -10,7 +10,7 @@ type CollateralRedeemer {
 
 validator {
   fn loan(
-    datum: CollaeralDatum,
+    datum: CollateralDatum,
     redeemer: CollateralRedeemer,
     context: ScriptContext,
   ) -> Bool {
