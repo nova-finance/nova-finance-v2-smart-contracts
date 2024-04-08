@@ -117,6 +117,7 @@ pub fn get_expected_collateral_from_inputs(
 
       let lender_address_hash: AddressHash =
         loan_offer_datum_typed.lender_address_hash
+
       let collateral_amount: Int =
         quantity_of(
           output.value,
@@ -128,16 +129,46 @@ pub fn get_expected_collateral_from_inputs(
       let interest_asset: AssetClass = loan_offer_datum_typed.interest_asset
       let interest_amount: Int = loan_offer_datum_typed.interest_amount
 
-      let expected_collateral =
-        ExpectedCollateral {
-          collateral_amount,
-          loan_duration,
-          interest_asset,
-          interest_amount,
-          lender_address_hash,
-        }
+      when
+        list.find(
+          expected_collateral_from_inputs,
+          fn(expected_collateral: ExpectedCollateral) {
+            expected_collateral.lender_address_hash == lender_address_hash
+          },
+        )
+      is {
+        Some(duplicate_collateral) -> {
+          let new_collateral =
+            ExpectedCollateral {
+              collateral_amount: duplicate_collateral.collateral_amount + collateral_amount,
+              loan_duration: duplicate_collateral.loan_duration,
+              interest_asset: duplicate_collateral.interest_asset,
+              interest_amount: duplicate_collateral.interest_amount,
+              lender_address_hash: duplicate_collateral.lender_address_hash,
+            }
 
-      [expected_collateral, ..expected_collateral_from_inputs]
+          let removed_duplicate_collateral_list =
+            list.filter(
+              expected_collateral_from_inputs,
+              fn(expected_collateral) {
+                expected_collateral.lender_address_hash != lender_address_hash
+              },
+            )
+
+          [new_collateral, ..removed_duplicate_collateral_list]
+        }
+        None -> {
+          let expected_collateral =
+            ExpectedCollateral {
+              collateral_amount,
+              loan_duration,
+              interest_asset,
+              interest_amount,
+              lender_address_hash,
+            }
+          [expected_collateral, ..expected_collateral_from_inputs]
+        }
+      }
     },
   )
 }
