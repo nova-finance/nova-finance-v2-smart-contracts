@@ -9,8 +9,8 @@ use aiken/transaction/credential.{
 }
 use aiken/transaction/value.{quantity_of}
 use types.{
-  AddressHash, AssetClass, CollateralDatum, ExpectedCollateral, LoanOfferDatum,
-  POSIXTime, ValidatorHash,
+  AddressHash, AssetClass, CollateralDatum, Info, LoanInput, LoanOfferDatum,
+  LoanOutput, POSIXTime, ValidatorHash,
 }
 
 pub fn scripthash_address(scripthash: ByteArray, stake_hash: ByteArray) {
@@ -27,10 +27,10 @@ pub fn get_lower_bound(range: ValidityRange) -> Int {
 
 pub fn get_output_collateral_info(
   script_outputs: List<Output>,
-) -> List<ExpectedCollateral> {
+) -> List<LoanOutput> {
   list.map(
     script_outputs,
-    fn(output) {
+    fn(output: Output) {
       expect InlineDatum(collateral_datum) = output.datum
       expect collateral_datum_typed: CollateralDatum = collateral_datum
 
@@ -46,15 +46,17 @@ pub fn get_output_collateral_info(
       let lender_address_hash: AddressHash =
         collateral_datum_typed.lender_address_hash
 
-      let output_collateral =
-        ExpectedCollateral {
+      let info =
+        Info {
           collateral_amount,
           loan_duration,
           interest_asset,
           interest_amount,
           lender_address_hash,
         }
-      output_collateral
+
+      let output_collateral_info: LoanOutput = LoanOutput { info }
+      output_collateral_info
     },
   )
 }
@@ -106,11 +108,11 @@ pub fn get_own_validator_inputs(
 
 pub fn get_expected_collateral_from_inputs(
   inputs_from_script: List<Input>,
-) -> List<ExpectedCollateral> {
+) -> List<LoanInput> {
   list.foldl(
     inputs_from_script,
     [],
-    fn(input, expected_collateral_from_inputs) {
+    fn(input, inputs_loan) {
       let output: Output = input.output
       expect InlineDatum(loan_offer_datum) = output.datum
       expect loan_offer_datum_typed: LoanOfferDatum = loan_offer_datum
@@ -131,44 +133,76 @@ pub fn get_expected_collateral_from_inputs(
 
       when
         list.find(
-          expected_collateral_from_inputs,
-          fn(expected_collateral: ExpectedCollateral) {
-            expected_collateral.lender_address_hash == lender_address_hash
+          inputs_loan,
+          fn(input_loan: LoanInput) {
+            input_loan.info.lender_address_hash == lender_address_hash
           },
         )
       is {
-        Some(duplicate_collateral) -> {
-          let new_collateral =
-            ExpectedCollateral {
-              collateral_amount: duplicate_collateral.collateral_amount + collateral_amount,
-              loan_duration: duplicate_collateral.loan_duration,
-              interest_asset: duplicate_collateral.interest_asset,
-              interest_amount: duplicate_collateral.interest_amount,
-              lender_address_hash: duplicate_collateral.lender_address_hash,
+        Some(duplicate_loan) -> {
+          let new_input_loan_info =
+            Info {
+              collateral_amount: duplicate_loan.info.collateral_amount + collateral_amount,
+              loan_duration: duplicate_loan.info.loan_duration,
+              interest_asset: duplicate_loan.info.interest_asset,
+              interest_amount: duplicate_loan.info.interest_amount,
+              lender_address_hash: duplicate_loan.info.lender_address_hash,
             }
+          let new_input_loan = LoanInput { info: new_input_loan_info }
 
           let removed_duplicate_collateral_list =
             list.filter(
-              expected_collateral_from_inputs,
-              fn(expected_collateral) {
-                expected_collateral.lender_address_hash != lender_address_hash
+              inputs_loan,
+              fn(input_loan: LoanInput) {
+                input_loan.info.lender_address_hash != lender_address_hash
               },
             )
 
-          [new_collateral, ..removed_duplicate_collateral_list]
+          [new_input_loan, ..removed_duplicate_collateral_list]
         }
         None -> {
-          let expected_collateral =
-            ExpectedCollateral {
+          let input_loan_info =
+            Info {
               collateral_amount,
               loan_duration,
               interest_asset,
               interest_amount,
               lender_address_hash,
             }
-          [expected_collateral, ..expected_collateral_from_inputs]
+          let input_loan = LoanInput { info: input_loan_info }
+          [input_loan, ..inputs_loan]
         }
       }
+    },
+  )
+}
+
+pub fn get_refund_info(script_outputs: List<Output>) -> List<LoanOutput> {
+  list.map(
+    script_outputs,
+    fn(output: Output) {
+      expect InlineDatum(loan_offer_datum) = output.datum
+      expect loan_offer_datum_typed: LoanOfferDatum = loan_offer_datum
+
+      let collateral_amount: Int = loan_offer_datum_typed.collateral_amount
+      let loan_duration: POSIXTime = loan_offer_datum_typed.loan_duration
+      let interest_asset: AssetClass = loan_offer_datum_typed.interest_asset
+      let interest_amount: Int = loan_offer_datum_typed.interest_amount
+      let lender_address_hash: AddressHash =
+        loan_offer_datum_typed.lender_address_hash
+
+      let info =
+        Info {
+          collateral_amount,
+          loan_duration,
+          interest_asset,
+          interest_amount,
+          lender_address_hash,
+        }
+
+      let output_refund_info: LoanOutput = LoanOutput { info }
+
+      output_refund_info
     },
   )
 }
