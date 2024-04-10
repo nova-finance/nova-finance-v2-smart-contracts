@@ -61,17 +61,5 @@ pub type Info {
   loan_duration: POSIXTime,
 }
 
-pub type LoanInput {
-  info: Info,
-}
-
-pub type LoanOutput {
-  info: Info,
-}
-
-pub type LoanRefund {
-  info: Info,
-}
-
 pub type ValidatorHash =
   Hash<Blake2b_224, Script>
