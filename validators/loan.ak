@@ -32,49 +32,27 @@ fn get_info_from_loan_offer(
   }
 }
 
-fn get_total_loan_consumed(
+fn get_total_loan_amount(
   list: List<Input>,
   inputs_from_script_validator: List<Input>,
   outputs_to_script_validator: List<Output>,
 ) -> Int {
-  let total_loan_consumed: Int =
-    list.foldl(
-      inputs_from_script_validator,
-      0,
-      fn(input: Input, acc: Int) {
-        expect InlineDatum(loan_datum) = input.output.datum
-        expect loan_datum_typed: LoanOfferDatum = loan_datum
-        let loan_amount: Int =
-          quantity_of(
-            input.output.value,
-            loan_datum_typed.loan_asset.policy_id,
-            loan_datum_typed.loan_asset.asset_name,
-          )
+  list.foldl(
+    inputs_from_script_validator,
+    0,
+    fn(input: Input, acc: Int) {
+      expect InlineDatum(loan_datum) = input.output.datum
+      expect loan_datum_typed: LoanOfferDatum = loan_datum
+      let loan_amount: Int =
+        quantity_of(
+          input.output.value,
+          loan_datum_typed.loan_asset.policy_id,
+          loan_datum_typed.loan_asset.asset_name,
+        )
 
-        acc + loan_amount
-      },
-    )
-
-  let loan_refunded: Int =
-    list.foldl(
-      outputs_to_script_validator,
-      0,
-      fn(output: Output, acc: Int) {
-        expect InlineDatum(loan_datum) = output.datum
-        expect loan_datum_typed: LoanOfferDatum = loan_datum
-        let loan_amount: Int =
-          quantity_of(
-            output.value,
-            loan_datum_typed.loan_asset.policy_id,
-            loan_datum_typed.loan_asset.asset_name,
-          )
-
-        acc + loan_amount
-      },
-    )
-
-  let total_loan_amount: Int = total_loan_consumed + loan_refunded
-  total_loan_amount
+      acc + loan_amount
+    },
+  )
 }
 
 fn get_outputs_refund_info(script_outputs: List<Output>) -> List<Info> {
@@ -265,7 +243,7 @@ fn loan_is_valid(
     get_own_validator_inputs(ctx, output_ref, contract_stake_hash)
 
   let total_loan_amount: Int =
-    get_total_loan_consumed(
+    get_total_loan_amount(
       ctx.transaction.inputs,
       inputs_from_script_validator,
       outputs_to_script_validator,
