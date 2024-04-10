@@ -1,4 +1,5 @@
 use aiken/hash.{Blake2b_224, Hash}
+use aiken/transaction.{TransactionId}
 use aiken/transaction/credential.{Script, VerificationKey}
 use aiken/transaction/value.{AssetName, PolicyId, Value}
 
@@ -14,27 +15,30 @@ pub type AddressHash =
   Hash<Blake2b_224, VerificationKey>
 
 pub type LoanOfferDatum {
-  loan_asset: AssetClass,
   loan_amount: Int,
-  collateral_asset: AssetClass,
+  loan_asset: AssetClass,
   collateral_amount: Int,
-  interest_asset: AssetClass,
+  collateral_asset: AssetClass,
   interest_amount: Int,
+  interest_asset: AssetClass,
+  interest_percent: Int,
   loan_duration: POSIXTime,
   lender_address_hash: AddressHash,
 }
 
 pub type CollateralDatum {
-  loan_asset: AssetClass,
   loan_amount: Int,
-  interest_asset: AssetClass,
-  interest_amount: Int,
+  loan_asset: AssetClass,
+  collateral_amount: Int,
   collateral_asset: AssetClass,
+  interest_amount: Int,
+  interest_asset: AssetClass,
   loan_duration: POSIXTime,
   lend_time: POSIXTime,
-  total_loan_amount: Int,
   lender_address_hash: AddressHash,
+  total_loan_amount: Int,
   borrower_address_hash: AddressHash,
+  tx_id: TransactionId,
 }
 
 pub type InterestDatum {
@@ -46,12 +50,15 @@ pub type AddressAndValue {
   value: Value,
 }
 
-pub type ExpectedCollateral {
+pub type Info {
+  loan_amount: Int,
+  loan_asset: AssetClass,
   collateral_amount: Int,
-  loan_duration: POSIXTime,
-  interest_asset: AssetClass,
+  collateral_asset: AssetClass,
   interest_amount: Int,
+  interest_asset: AssetClass,
   lender_address_hash: AddressHash,
+  loan_duration: POSIXTime,
 }
 
 pub type ValidatorHash =
