@@ -88,11 +88,11 @@ pub fn get_info_from_loan_offer(
 }
 
 pub fn info_matches(
-  input_loan_info: List<Info>,
+  inputs_loan_info: List<Info>,
   outputs_collateral_info: List<Info>,
 ) -> Bool {
   let info_difference =
-    list.difference(input_loan_info, outputs_collateral_info)
+    list.difference(inputs_loan_info, outputs_collateral_info)
 
   let info_matches = list.length(info_difference) == 0
   info_matches
