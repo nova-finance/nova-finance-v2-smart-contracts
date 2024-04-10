@@ -15,9 +15,7 @@ type LoanRedeemer {
   CancelRequest
 }
 
-fn get_expected_collateral_from_inputs(
-  inputs_from_script: List<Input>,
-) -> List<Info> {
+fn get_inputs_loan_info(inputs_from_script: List<Input>) -> List<Info> {
   list.foldl(
     inputs_from_script,
     [],
@@ -72,7 +70,7 @@ fn get_expected_collateral_from_inputs(
   )
 }
 
-fn get_refund_info(script_outputs: List<Output>) -> List<Info> {
+fn get_outputs_refund_info(script_outputs: List<Output>) -> List<Info> {
   list.map(
     script_outputs,
     fn(output: Output) {
@@ -84,7 +82,7 @@ fn get_refund_info(script_outputs: List<Output>) -> List<Info> {
   )
 }
 
-fn get_output_collateral_info(
+fn get_outputs_collateral_info(
   script_outputs: List<Output>,
   total_loan_amount: Int,
   borrower_address_hash: AddressHash,
@@ -146,7 +144,7 @@ fn output_value_valid(
     info_matches
   } else if refund_to_validator_length == 1 {
     let outputs_refund_info: List<Info> =
-      get_refund_info(outputs_to_script_validator)
+      get_outputs_refund_info(outputs_to_script_validator)
 
     when list.at(outputs_refund_info, 0) is {
       Some(output_refund_info) ->
@@ -216,7 +214,7 @@ fn loan_is_valid(
     get_own_validator_inputs(ctx, output_ref, contract_stake_hash)
 
   let inputs_loan_info: List<Info> =
-    get_expected_collateral_from_inputs(inputs_from_script_validator)
+    get_inputs_loan_info(inputs_from_script_validator)
 
   let total_loan_consumed: Int =
     list.foldl(
@@ -257,7 +255,7 @@ fn loan_is_valid(
   let total_loan_amount: Int = total_loan_consumed - loan_refunded
 
   let outputs_collateral_info: List<Info> =
-    get_output_collateral_info(
+    get_outputs_collateral_info(
       outputs_to_collateral_validator,
       total_loan_amount,
       borrower_address_hash,
