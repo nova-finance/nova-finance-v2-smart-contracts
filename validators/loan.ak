@@ -186,22 +186,11 @@ fn get_outputs_collateral_info(
   }
 }
 
-fn loan_is_valid(
-  ctx: ScriptContext,
-  collateral_script_hash: ByteArray,
-  contract_stake_hash: ByteArray,
-  output_ref: OutputReference,
-  borrower_address_hash: AddressHash,
-) -> Bool {
-  let outputs_to_collateral_validator: List<Output> =
-    find_script_outputs(ctx.transaction.outputs, collateral_script_hash)
-
-  let outputs_to_script_validator: List<Output> =
-    find_script_outputs(ctx.transaction.outputs, contract_stake_hash)
-
-  let inputs_from_script_validator: List<Input> =
-    get_own_validator_inputs(ctx, output_ref, contract_stake_hash)
-
+fn get_total_loan_consumed(
+  list: List<Input>,
+  inputs_from_script_validator: List<Input>,
+  outputs_to_script_validator: List<Output>,
+) -> Int {
   let total_loan_consumed: Int =
     list.foldl(
       inputs_from_script_validator,
@@ -238,7 +227,33 @@ fn loan_is_valid(
       },
     )
 
-  let total_loan_amount: Int = total_loan_consumed - loan_refunded
+  let total_loan_amount: Int = total_loan_consumed + loan_refunded
+  total_loan_amount
+}
+
+fn loan_is_valid(
+  ctx: ScriptContext,
+  collateral_script_hash: ByteArray,
+  contract_stake_hash: ByteArray,
+  output_ref: OutputReference,
+  borrower_address_hash: AddressHash,
+) -> Bool {
+  let outputs_to_collateral_validator: List<Output> =
+    find_script_outputs(ctx.transaction.outputs, collateral_script_hash)
+
+  let outputs_to_script_validator: List<Output> =
+    find_script_outputs(ctx.transaction.outputs, contract_stake_hash)
+
+  let inputs_from_script_validator: List<Input> =
+    get_own_validator_inputs(ctx, output_ref, contract_stake_hash)
+
+  let total_loan_amount: Int =
+    get_total_loan_consumed(
+      ctx.transaction.inputs,
+      inputs_from_script_validator,
+      outputs_to_script_validator,
+    )
+
   let outputs_collateral_info: List<Info> =
     get_outputs_collateral_info(
       outputs_to_collateral_validator,
