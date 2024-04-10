@@ -4,12 +4,10 @@ use aiken/transaction.{
   find_script_outputs,
 }
 use aiken/transaction/value.{quantity_of}
-use types.{
-  AddressHash, CollateralDatum, Info, LoanInput, LoanOfferDatum, LoanOutput,
-}
+use types.{AddressHash, Info, LoanInput, LoanOfferDatum, LoanOutput}
 use utils.{
   get_expected_collateral_from_inputs, get_output_collateral_info,
-  get_own_validator_inputs, get_refund_info,
+  get_own_validator_inputs, get_refund_info, info_matches,
 }
 
 type LoanRedeemer {
@@ -17,78 +15,56 @@ type LoanRedeemer {
   CancelRequest
 }
 
-fn collateral_output_is_valid(
-  outputs_to_collateral_validator: List<Output>,
+fn output_value_valid(
   outputs_to_script_validator: List<Output>,
-  inputs_from_script_validator: List<Input>,
+  input_loan_info: List<Info>,
+  outputs_collateral_info: List<Info>,
 ) -> Bool {
-  let refund_output_length: Int = list.length(outputs_to_script_validator)
+  let refund_to_validator_length: Int = list.length(outputs_to_script_validator)
 
-  let inputs_loan: List<LoanInput> =
-    get_expected_collateral_from_inputs(inputs_from_script_validator)
-
-  let input_loan_info: List<Info> =
-    list.map(inputs_loan, fn(loan_input: LoanInput) { loan_input.info })
-
-  let outputs_collateral: List<LoanOutput> =
-    get_output_collateral_info(outputs_to_collateral_validator)
-
-  let outputs_collateral_info: List<Info> =
-    list.map(
-      outputs_collateral,
-      fn(loan_output: LoanOutput) { loan_output.info },
-    )
-
-  if refund_output_length == 0 {
-    let info_difference =
-      list.difference(input_loan_info, outputs_collateral_info)
-
-    let info_matches = list.length(info_difference) == 0
+  if refund_to_validator_length == 0 {
+    let info_matches = info_matches(input_loan_info, outputs_collateral_info)
     info_matches
-  } else if refund_output_length == 1 {
-    let outputs_refund: List<LoanOutput> =
+  } else if refund_to_validator_length == 1 {
+    let outputs_refund_info: List<Info> =
       get_refund_info(outputs_to_script_validator)
 
-    when list.at(outputs_refund, 0) is {
-      Some(refund_output) ->
+    when list.at(outputs_refund_info, 0) is {
+      Some(output_refund_info) ->
         when
           list.find(
             outputs_collateral_info,
             fn(output_collateral_info: Info) {
-              output_collateral_info.lender_address_hash == refund_output.info.lender_address_hash
+              output_collateral_info.lender_address_hash == output_refund_info.lender_address_hash
             },
           )
         is {
-          Some(collateral_refund_utxo) -> {
-            let new_output_collateral_amount: Int =
-              refund_output.info.collateral_amount + collateral_refund_utxo.collateral_amount
-
+          Some(output_collateral_info) -> {
             let new_output_collateral_info =
               Info {
-                collateral_amount: new_output_collateral_amount,
-                loan_duration: collateral_refund_utxo.loan_duration,
-                interest_asset: collateral_refund_utxo.interest_asset,
-                interest_amount: collateral_refund_utxo.interest_amount,
-                lender_address_hash: collateral_refund_utxo.lender_address_hash,
+                loan_amount: output_refund_info.loan_amount + output_collateral_info.loan_amount,
+                loan_asset: output_collateral_info.loan_asset,
+                collateral_asset: output_collateral_info.collateral_asset,
+                collateral_amount: output_refund_info.collateral_amount + output_collateral_info.collateral_amount,
+                interest_asset: output_collateral_info.interest_asset,
+                interest_amount: output_refund_info.interest_amount + output_collateral_info.interest_amount,
+                lender_address_hash: output_collateral_info.lender_address_hash,
+                loan_duration: output_collateral_info.loan_duration,
               }
 
             let filtered_output: List<Info> =
               list.filter(
                 outputs_collateral_info,
                 fn(output_collateral_info: Info) {
-                  output_collateral_info.lender_address_hash == refund_output.info.lender_address_hash
+                  output_collateral_info.lender_address_hash == output_refund_info.lender_address_hash
                 },
               )
 
             let combined_refund_and_collateral_info =
               list.push(filtered_output, new_output_collateral_info)
 
-            let info_difference =
-              list.difference(
-                input_loan_info,
-                combined_refund_and_collateral_info,
-              )
-            let info_matches = list.length(info_difference) == 0
+            let info_matches =
+              info_matches(input_loan_info, combined_refund_and_collateral_info)
             info_matches
           }
           None -> False
@@ -155,35 +131,33 @@ fn loan_is_valid(
 
   let total_loan_amount: Int = total_loan_consumed - loan_refunded
 
-  let collateral_output_datum_valid =
-    list.all(
+  let inputs_loan: List<LoanInput> =
+    get_expected_collateral_from_inputs(inputs_from_script_validator)
+  let input_loan_info: List<Info> =
+    list.map(inputs_loan, fn(loan_input: LoanInput) { loan_input.info })
+
+  let outputs_collateral: List<LoanOutput> =
+    get_output_collateral_info(
       outputs_to_collateral_validator,
-      fn(output: Output) {
-        expect InlineDatum(collateral_datum) = output.datum
-        expect collateral_datum_typed: CollateralDatum = collateral_datum
-
-        let borrower_address_valid =
-          collateral_datum_typed.borrower_address_hash == borrower_address_hash
-        let tx_id_valid = collateral_datum_typed.tx_id == ctx.transaction.id
-        let lend_time_valid =
-          collateral_datum_typed.lend_time == utils.get_lower_bound(
-            ctx.transaction.validity_range,
-          )
-        let total_loan_amount_valid =
-          collateral_datum_typed.total_loan_amount == total_loan_amount
-
-        borrower_address_valid && tx_id_valid && lend_time_valid && total_loan_amount_valid
-      },
+      total_loan_amount,
+      borrower_address_hash,
+      ctx,
     )
 
-  let collateral_output_value_valid =
-    collateral_output_is_valid(
-      outputs_to_collateral_validator,
+  let outputs_collateral_info: List<Info> =
+    list.map(
+      outputs_collateral,
+      fn(loan_output: LoanOutput) { loan_output.info },
+    )
+
+  let output_value_valid =
+    output_value_valid(
       outputs_to_script_validator,
-      inputs_from_script_validator,
+      input_loan_info,
+      outputs_collateral_info,
     )
 
-  collateral_output_datum_valid && collateral_output_value_valid
+  output_value_valid
 }
 
 validator(collateral_script_hash: ByteArray, contract_stake_hash: ByteArray) {
