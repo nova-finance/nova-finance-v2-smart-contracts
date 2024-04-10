@@ -84,64 +84,58 @@ fn get_outputs_refund_info(script_outputs: List<Output>) -> List<Info> {
 
 fn get_outputs_collateral_info(
   script_outputs: List<Output>,
+  outputs_to_script_validator: List<Output>,
   total_loan_amount: Int,
   borrower_address_hash: AddressHash,
   ctx: ScriptContext,
 ) -> List<Info> {
-  list.filter_map(
-    script_outputs,
-    fn(output: Output) {
-      expect InlineDatum(collateral_datum) = output.datum
-      expect collateral_datum_typed: CollateralDatum = collateral_datum
+  let outputs_collateral_info =
+    list.filter_map(
+      script_outputs,
+      fn(output: Output) {
+        expect InlineDatum(collateral_datum) = output.datum
+        expect collateral_datum_typed: CollateralDatum = collateral_datum
 
-      let borrower_address_valid =
-        collateral_datum_typed.borrower_address_hash == borrower_address_hash
-      let tx_id_valid = collateral_datum_typed.tx_id == ctx.transaction.id
-      let lend_time_valid =
-        collateral_datum_typed.lend_time == get_lower_bound(
-          ctx.transaction.validity_range,
-        )
-      let total_loan_amount_valid =
-        collateral_datum_typed.total_loan_amount == total_loan_amount
+        let borrower_address_valid =
+          collateral_datum_typed.borrower_address_hash == borrower_address_hash
+        let tx_id_valid = collateral_datum_typed.tx_id == ctx.transaction.id
+        let lend_time_valid =
+          collateral_datum_typed.lend_time == get_lower_bound(
+            ctx.transaction.validity_range,
+          )
+        let total_loan_amount_valid =
+          collateral_datum_typed.total_loan_amount == total_loan_amount
 
-      let output_datum_valid =
-        borrower_address_valid && tx_id_valid && lend_time_valid && total_loan_amount_valid
+        let output_datum_valid =
+          borrower_address_valid && tx_id_valid && lend_time_valid && total_loan_amount_valid
 
-      if output_datum_valid {
-        let output_collateral_info =
-          Info {
-            loan_amount: collateral_datum_typed.loan_amount,
-            loan_asset: collateral_datum_typed.loan_asset,
-            collateral_amount: quantity_of(
-              output.value,
-              collateral_datum_typed.collateral_asset.policy_id,
-              collateral_datum_typed.collateral_asset.asset_name,
-            ),
-            collateral_asset: collateral_datum_typed.collateral_asset,
-            interest_amount: collateral_datum_typed.interest_amount,
-            interest_asset: collateral_datum_typed.interest_asset,
-            lender_address_hash: collateral_datum_typed.lender_address_hash,
-            loan_duration: collateral_datum_typed.loan_duration,
-          }
+        if output_datum_valid {
+          let output_collateral_info =
+            Info {
+              loan_amount: collateral_datum_typed.loan_amount,
+              loan_asset: collateral_datum_typed.loan_asset,
+              collateral_amount: quantity_of(
+                output.value,
+                collateral_datum_typed.collateral_asset.policy_id,
+                collateral_datum_typed.collateral_asset.asset_name,
+              ),
+              collateral_asset: collateral_datum_typed.collateral_asset,
+              interest_amount: collateral_datum_typed.interest_amount,
+              interest_asset: collateral_datum_typed.interest_asset,
+              lender_address_hash: collateral_datum_typed.lender_address_hash,
+              loan_duration: collateral_datum_typed.loan_duration,
+            }
 
-        Some(output_collateral_info)
-      } else {
-        None
-      }
-    },
-  )
-}
-
-fn output_value_valid(
-  outputs_to_script_validator: List<Output>,
-  inputs_loan_info: List<Info>,
-  outputs_collateral_info: List<Info>,
-) -> Bool {
+          Some(output_collateral_info)
+        } else {
+          None
+        }
+      },
+    )
   let refund_to_validator_length: Int = list.length(outputs_to_script_validator)
 
   if refund_to_validator_length == 0 {
-    let info_matches = info_matches(inputs_loan_info, outputs_collateral_info)
-    info_matches
+    outputs_collateral_info
   } else if refund_to_validator_length == 1 {
     let outputs_refund_info: List<Info> =
       get_outputs_refund_info(outputs_to_script_validator)
@@ -180,20 +174,15 @@ fn output_value_valid(
             let combined_refund_and_collateral_info =
               list.push(filtered_output, new_output_collateral_info)
 
-            let info_matches =
-              info_matches(
-                inputs_loan_info,
-                combined_refund_and_collateral_info,
-              )
-            info_matches
+            combined_refund_and_collateral_info
           }
-          None -> False
+          None -> fail
         }
 
-      None -> False
+      None -> fail
     }
   } else {
-    False
+    fail
   }
 }
 
@@ -212,9 +201,6 @@ fn loan_is_valid(
 
   let inputs_from_script_validator: List<Input> =
     get_own_validator_inputs(ctx, output_ref, contract_stake_hash)
-
-  let inputs_loan_info: List<Info> =
-    get_inputs_loan_info(inputs_from_script_validator)
 
   let total_loan_consumed: Int =
     list.foldl(
@@ -253,23 +239,20 @@ fn loan_is_valid(
     )
 
   let total_loan_amount: Int = total_loan_consumed - loan_refunded
-
   let outputs_collateral_info: List<Info> =
     get_outputs_collateral_info(
       outputs_to_collateral_validator,
+      outputs_to_script_validator,
       total_loan_amount,
       borrower_address_hash,
       ctx,
     )
 
-  let output_value_valid =
-    output_value_valid(
-      outputs_to_script_validator,
-      inputs_loan_info,
-      outputs_collateral_info,
-    )
+  let inputs_loan_info: List<Info> =
+    get_inputs_loan_info(inputs_from_script_validator)
 
-  output_value_valid
+  let info_matches = info_matches(inputs_loan_info, outputs_collateral_info)
+  info_matches
 }
 
 validator(collateral_script_hash: ByteArray, contract_stake_hash: ByteArray) {
