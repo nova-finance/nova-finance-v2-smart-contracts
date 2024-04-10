@@ -3,16 +3,90 @@ use aiken/transaction.{
   InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
   find_script_outputs,
 }
-use aiken/transaction/value.{quantity_of}
+use aiken/transaction/value.{Value, quantity_of}
 use types.{AddressHash, CollateralDatum, Info, LoanOfferDatum}
-use utils.{
-  get_info_from_loan_offer, get_lower_bound, get_own_validator_inputs,
-  info_matches,
-}
+use utils.{get_lower_bound, get_own_validator_inputs, info_matches}
 
 type LoanRedeemer {
   GetLoan(AddressHash)
   CancelRequest
+}
+
+fn get_info_from_loan_offer(
+  loan_offer_datum: LoanOfferDatum,
+  value: Value,
+) -> Info {
+  Info {
+    loan_amount: quantity_of(
+      value,
+      loan_offer_datum.loan_asset.policy_id,
+      loan_offer_datum.loan_asset.asset_name,
+    ),
+    loan_asset: loan_offer_datum.loan_asset,
+    collateral_amount: loan_offer_datum.collateral_amount,
+    collateral_asset: loan_offer_datum.collateral_asset,
+    interest_amount: loan_offer_datum.interest_amount,
+    interest_asset: loan_offer_datum.interest_asset,
+    lender_address_hash: loan_offer_datum.lender_address_hash,
+    loan_duration: loan_offer_datum.loan_duration,
+  }
+}
+
+fn get_total_loan_consumed(
+  list: List<Input>,
+  inputs_from_script_validator: List<Input>,
+  outputs_to_script_validator: List<Output>,
+) -> Int {
+  let total_loan_consumed: Int =
+    list.foldl(
+      inputs_from_script_validator,
+      0,
+      fn(input: Input, acc: Int) {
+        expect InlineDatum(loan_datum) = input.output.datum
+        expect loan_datum_typed: LoanOfferDatum = loan_datum
+        let loan_amount: Int =
+          quantity_of(
+            input.output.value,
+            loan_datum_typed.loan_asset.policy_id,
+            loan_datum_typed.loan_asset.asset_name,
+          )
+
+        acc + loan_amount
+      },
+    )
+
+  let loan_refunded: Int =
+    list.foldl(
+      outputs_to_script_validator,
+      0,
+      fn(output: Output, acc: Int) {
+        expect InlineDatum(loan_datum) = output.datum
+        expect loan_datum_typed: LoanOfferDatum = loan_datum
+        let loan_amount: Int =
+          quantity_of(
+            output.value,
+            loan_datum_typed.loan_asset.policy_id,
+            loan_datum_typed.loan_asset.asset_name,
+          )
+
+        acc + loan_amount
+      },
+    )
+
+  let total_loan_amount: Int = total_loan_consumed + loan_refunded
+  total_loan_amount
+}
+
+fn get_outputs_refund_info(script_outputs: List<Output>) -> List<Info> {
+  list.map(
+    script_outputs,
+    fn(output: Output) {
+      expect InlineDatum(loan_offer_datum) = output.datum
+      expect loan_offer_datum_typed: LoanOfferDatum = loan_offer_datum
+      let info = get_info_from_loan_offer(loan_offer_datum_typed, output.value)
+      info
+    },
+  )
 }
 
 fn get_inputs_loan_info(inputs_from_script: List<Input>) -> List<Info> {
@@ -66,18 +140,6 @@ fn get_inputs_loan_info(inputs_from_script: List<Input>) -> List<Info> {
           [input_loan_info, ..inputs_loan]
         }
       }
-    },
-  )
-}
-
-fn get_outputs_refund_info(script_outputs: List<Output>) -> List<Info> {
-  list.map(
-    script_outputs,
-    fn(output: Output) {
-      expect InlineDatum(loan_offer_datum) = output.datum
-      expect loan_offer_datum_typed: LoanOfferDatum = loan_offer_datum
-      let info = get_info_from_loan_offer(loan_offer_datum_typed, output.value)
-      info
     },
   )
 }
@@ -184,51 +246,6 @@ fn get_outputs_collateral_info(
   } else {
     fail
   }
-}
-
-fn get_total_loan_consumed(
-  list: List<Input>,
-  inputs_from_script_validator: List<Input>,
-  outputs_to_script_validator: List<Output>,
-) -> Int {
-  let total_loan_consumed: Int =
-    list.foldl(
-      inputs_from_script_validator,
-      0,
-      fn(input: Input, acc: Int) {
-        expect InlineDatum(loan_datum) = input.output.datum
-        expect loan_datum_typed: LoanOfferDatum = loan_datum
-        let loan_amount: Int =
-          quantity_of(
-            input.output.value,
-            loan_datum_typed.loan_asset.policy_id,
-            loan_datum_typed.loan_asset.asset_name,
-          )
-
-        acc + loan_amount
-      },
-    )
-
-  let loan_refunded: Int =
-    list.foldl(
-      outputs_to_script_validator,
-      0,
-      fn(output: Output, acc: Int) {
-        expect InlineDatum(loan_datum) = output.datum
-        expect loan_datum_typed: LoanOfferDatum = loan_datum
-        let loan_amount: Int =
-          quantity_of(
-            output.value,
-            loan_datum_typed.loan_asset.policy_id,
-            loan_datum_typed.loan_asset.asset_name,
-          )
-
-        acc + loan_amount
-      },
-    )
-
-  let total_loan_amount: Int = total_loan_consumed + loan_refunded
-  total_loan_amount
 }
 
 fn loan_is_valid(
