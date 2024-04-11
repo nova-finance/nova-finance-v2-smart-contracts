@@ -7,7 +7,7 @@ use aiken/transaction.{
 use aiken/transaction/credential.{
   Address, Inline, ScriptCredential, VerificationKeyCredential,
 }
-use types.{Info, ValidatorHash}
+use types.{ValidatorHash}
 
 pub fn scripthash_address(scripthash: ByteArray, stake_hash: ByteArray) {
   Address {

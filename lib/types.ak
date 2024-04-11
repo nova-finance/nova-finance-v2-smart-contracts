@@ -43,7 +43,6 @@ pub type CollateralDatum {
 
 pub type InterestDatum {
   lender_address_hash: AddressHash,
-  repay_amount: Int,
   repay_asset: AssetClass,
 }
 

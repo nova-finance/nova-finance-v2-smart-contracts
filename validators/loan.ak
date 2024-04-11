@@ -69,8 +69,9 @@ fn get_total_repay_amount(
             loan_datum_typed.loan_asset.policy_id,
             loan_datum_typed.loan_asset.asset_name,
           )
+        let interest_amount = loan_datum_typed.interest_amount
 
-        acc + loan_amount
+        acc + loan_amount + interest_amount
       },
     )
 
