@@ -5,7 +5,8 @@ use aiken/transaction.{
 }
 use aiken/transaction/value.{quantity_of}
 use types.{
-  AddressHash, AssetClass, CollateralDatum, InterestDatum, ValidateRepayInfo,
+  AddressHash, AssetClass, CollateralDatum, InterestDatum, LoanAndInterestAmount,
+  ValidateRepayInfo,
 }
 use utils.{get_own_validator_inputs}
 
@@ -14,21 +15,55 @@ type CollateralRedeemer {
   LiquidateCollateral
 }
 
-fn total_repay_amount(outputs_to_interest_validator: List<Output>) -> Int {
-  list.foldl(
-    outputs_to_interest_validator,
-    0,
-    fn(output: Output, acc: Int) {
-      expect InlineDatum(interest_datum) = output.datum
-      expect interest_datum_typed: InterestDatum = interest_datum
-      let repaid_amount: Int =
+fn get_loan_and_interest_from_output(output: Output) -> LoanAndInterestAmount {
+  expect InlineDatum(interest_datum) = output.datum
+  expect interest_datum_typed: InterestDatum = interest_datum
+  let loan_and_interest_asset_same =
+    interest_datum_typed.repay_loan_asset == interest_datum_typed.repay_interest_asset
+
+  when loan_and_interest_asset_same is {
+    True -> {
+      let total_asset_amount =
         quantity_of(
           output.value,
-          interest_datum_typed.repay_asset.policy_id,
-          interest_datum_typed.repay_asset.asset_name,
+          interest_datum_typed.repay_loan_asset.policy_id,
+          interest_datum_typed.repay_loan_asset.asset_name,
         )
 
-      acc + repaid_amount
+      LoanAndInterestAmount {
+        loan_amount: total_asset_amount - interest_datum_typed.repay_interest_amount,
+        interest_amount: total_asset_amount - interest_datum_typed.repay_loan_amount,
+      }
+    }
+    False ->
+      LoanAndInterestAmount {
+        loan_amount: quantity_of(
+          output.value,
+          interest_datum_typed.repay_loan_asset.policy_id,
+          interest_datum_typed.repay_loan_asset.asset_name,
+        ),
+        interest_amount: quantity_of(
+          output.value,
+          interest_datum_typed.repay_interest_asset.policy_id,
+          interest_datum_typed.repay_interest_asset.asset_name,
+        ),
+      }
+  }
+}
+
+fn get_total_repay_loan_and_interest_amount(
+  outputs_to_interest_validator: List<Output>,
+) -> LoanAndInterestAmount {
+  list.foldl(
+    outputs_to_interest_validator,
+    LoanAndInterestAmount { loan_amount: 0, interest_amount: 0 },
+    fn(output: Output, acc: LoanAndInterestAmount) {
+      let loan_and_interest_amount = get_loan_and_interest_from_output(output)
+
+      LoanAndInterestAmount {
+        loan_amount: acc.loan_amount + loan_and_interest_amount.loan_amount,
+        interest_amount: acc.interest_amount + loan_and_interest_amount.interest_amount,
+      }
     },
   )
 }
@@ -37,7 +72,7 @@ fn total_repay_amount(outputs_to_interest_validator: List<Output>) -> Int {
 // signed by borrower
 fn get_inputs_collateral_info(
   inputs_from_script_validator: List<Input>,
-  total_repaid_amount: Int,
+  total_repaid_amount: LoanAndInterestAmount,
   tx_id: TransactionId,
   validity_range: ValidityRange,
   signatures: List<AddressHash>,
@@ -51,7 +86,9 @@ fn get_inputs_collateral_info(
 
       let tx_id_valid = tx_id == collateral_datum_typed.tx_id
       let total_loan_amount_valid =
-        total_repaid_amount == collateral_datum_typed.total_repay_amount
+        total_repaid_amount.loan_amount == collateral_datum_typed.total_loan_amount
+      let total_interest_amount_valid =
+        total_repaid_amount.interest_amount == collateral_datum_typed.total_interest_amount
       let deadline_not_passed =
         collateral_datum_typed.lend_time + collateral_datum_typed.loan_duration > utils.get_lower_bound(
           validity_range,
@@ -60,15 +97,17 @@ fn get_inputs_collateral_info(
         list.has(signatures, collateral_datum_typed.borrower_address_hash)
 
       let collateral_valid =
-        tx_id_valid && total_loan_amount_valid && deadline_not_passed && signed_by_borrower
+        tx_id_valid && total_loan_amount_valid && deadline_not_passed && signed_by_borrower && total_interest_amount_valid
 
       if collateral_valid {
         None
       } else {
         Some(
           ValidateRepayInfo {
-            repay_amount: collateral_datum_typed.total_repay_amount,
-            repay_asset: collateral_datum_typed.loan_asset,
+            repay_loan_amount: collateral_datum_typed.total_loan_amount,
+            repay_loan_asset: collateral_datum_typed.loan_asset,
+            repay_interest_amount: collateral_datum_typed.total_interest_amount,
+            repay_interest_asset: collateral_datum_typed.interest_asset,
             lender_address_hash: collateral_datum_typed.lender_address_hash,
           },
         )
@@ -86,13 +125,13 @@ fn get_outputs_interest_info(
       expect InlineDatum(interest_datum) = output.datum
       expect interest_datum_typed: InterestDatum = interest_datum
 
+      let loan_and_interest_amount = get_loan_and_interest_from_output(output)
+
       ValidateRepayInfo {
-        repay_amount: quantity_of(
-          output.value,
-          interest_datum_typed.repay_asset.policy_id,
-          interest_datum_typed.repay_asset.asset_name,
-        ),
-        repay_asset: interest_datum_typed.repay_asset,
+        repay_loan_amount: loan_and_interest_amount.loan_amount,
+        repay_loan_asset: interest_datum_typed.repay_loan_asset,
+        repay_interest_amount: loan_and_interest_amount.interest_amount,
+        repay_interest_asset: interest_datum_typed.repay_interest_asset,
         lender_address_hash: interest_datum_typed.lender_address_hash,
       }
     },
@@ -117,8 +156,8 @@ fn interest_payment_is_valid(
   let inputs_from_script_validator: List<Input> =
     get_own_validator_inputs(ctx, output_ref, contract_stake_hash)
 
-  let total_repay_amount: Int =
-    total_repay_amount(outputs_to_interest_validator)
+  let total_repay_amount: LoanAndInterestAmount =
+    get_total_repay_loan_and_interest_amount(outputs_to_interest_validator)
 
   let inputs_collateral_info: List<ValidateRepayInfo> =
     get_inputs_collateral_info(
