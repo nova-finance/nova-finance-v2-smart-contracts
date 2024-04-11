@@ -10,10 +10,10 @@ validator {
   fn interest(
     datum: InterestDatum,
     _redeemer: Redeemer,
-    context: ScriptContext,
+    ctx: ScriptContext,
   ) -> Bool {
     let must_be_signed_by_lender =
-      list.has(context.transaction.extra_signatories, datum.lender_address_hash)
+      list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
     must_be_signed_by_lender
   }
 }
