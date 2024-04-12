@@ -36,6 +36,7 @@ pub type CollateralDatum {
   loan_duration: POSIXTime,
   lend_time: POSIXTime,
   lender_address_hash: AddressHash,
+  total_interest_amount: Int,
   total_loan_amount: Int,
   borrower_address_hash: AddressHash,
   tx_id: TransactionId,
@@ -43,6 +44,10 @@ pub type CollateralDatum {
 
 pub type InterestDatum {
   lender_address_hash: AddressHash,
+  repay_loan_amount: Int,
+  repay_loan_asset: AssetClass,
+  repay_interest_amount: Int,
+  repay_interest_asset: AssetClass,
 }
 
 pub type AddressAndValue {
@@ -61,5 +66,18 @@ pub type Info {
   loan_duration: POSIXTime,
 }
 
+pub type ValidateRepayInfo {
+  lender_address_hash: AddressHash,
+  repay_loan_amount: Int,
+  repay_loan_asset: AssetClass,
+  repay_interest_amount: Int,
+  repay_interest_asset: AssetClass,
+}
+
 pub type ValidatorHash =
   Hash<Blake2b_224, Script>
+
+pub type LoanAndInterestAmount {
+  loan_amount: Int,
+  interest_amount: Int,
+}
