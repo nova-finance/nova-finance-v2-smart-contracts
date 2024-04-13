@@ -55,7 +55,7 @@ pub type AddressAndValue {
   value: Value,
 }
 
-pub type Info {
+pub type ValidateLoanOfferInfo {
   loan_amount: Int,
   loan_asset: AssetClass,
   collateral_amount: Int,
