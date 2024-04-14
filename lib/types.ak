@@ -43,11 +43,11 @@ pub type CollateralDatum {
 }
 
 pub type InterestDatum {
-  lender_address_hash: AddressHash,
   repay_loan_amount: Int,
   repay_loan_asset: AssetClass,
   repay_interest_amount: Int,
   repay_interest_asset: AssetClass,
+  lender_address_hash: AddressHash,
 }
 
 pub type AddressAndValue {
@@ -67,11 +67,11 @@ pub type ValidateLoanOfferInfo {
 }
 
 pub type ValidateRepayInfo {
-  lender_address_hash: AddressHash,
   repay_loan_amount: Int,
   repay_loan_asset: AssetClass,
   repay_interest_amount: Int,
   repay_interest_asset: AssetClass,
+  lender_address_hash: AddressHash,
 }
 
 pub type ValidatorHash =
