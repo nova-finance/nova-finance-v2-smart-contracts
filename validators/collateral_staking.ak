@@ -120,7 +120,8 @@ fn get_outputs_interest_info(
       expect InlineDatum(interest_datum) = output.datum
       expect interest_datum_typed: InterestDatum = interest_datum
 
-      let loan_and_interest_amount = get_loan_and_interest_from_output(output)
+      let loan_and_interest_amount: LoanAndInterestAmount =
+        get_loan_and_interest_from_output(output)
 
       ValidateRepayInfo {
         repay_loan_amount: loan_and_interest_amount.loan_amount,
