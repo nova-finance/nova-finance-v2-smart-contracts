@@ -29,7 +29,6 @@ pub type LoanOfferDatum {
 pub type CollateralDatum {
   loan_amount: Int,
   loan_asset: AssetClass,
-  collateral_amount: Int,
   collateral_asset: AssetClass,
   interest_amount: Int,
   interest_asset: AssetClass,
@@ -55,7 +54,7 @@ pub type AddressAndValue {
   value: Value,
 }
 
-pub type ValidateLoanOfferInfo {
+pub type ValidateLoanInfo {
   loan_amount: Int,
   loan_asset: AssetClass,
   collateral_amount: Int,
