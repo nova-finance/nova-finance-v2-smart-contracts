@@ -1,7 +1,7 @@
 use aiken/list
 use aiken/transaction.{
-  InlineDatum, Input, Output, ScriptContext, TransactionId, ValidityRange,
-  WithdrawFrom, find_script_outputs,
+  InlineDatum, Input, Output, ScriptContext, ValidityRange, WithdrawFrom,
+  find_script_outputs,
 }
 use aiken/transaction/value.{quantity_of}
 use types.{
@@ -63,12 +63,9 @@ fn get_total_repay_loan_and_interest_amount(
   )
 }
 
-// map filter, make sure the same tx id, deadline has not passed, and each total_loan_amount = get_total_repaid_amount.
-// signed by borrower
 fn get_inputs_collateral_info(
   inputs_from_collateral_validator: List<Input>,
   total_repaid_amount: LoanAndInterestAmount,
-  loan_tx_id: TransactionId,
   validity_range: ValidityRange,
   signatures: List<AddressHash>,
 ) -> List<ValidateRepayInfo> {
@@ -79,7 +76,6 @@ fn get_inputs_collateral_info(
         input_from_collateral_validator.output.datum
       expect collateral_datum_typed: CollateralDatum = collateral_datum
 
-      let tx_id_valid = loan_tx_id == collateral_datum_typed.tx_id
       let total_loan_amount_valid =
         total_repaid_amount.loan_amount == collateral_datum_typed.total_loan_amount
       let total_interest_amount_valid =
@@ -92,7 +88,7 @@ fn get_inputs_collateral_info(
         list.has(signatures, collateral_datum_typed.borrower_address_hash)
 
       let collateral_valid =
-        tx_id_valid && total_loan_amount_valid && deadline_not_passed && signed_by_borrower && total_interest_amount_valid
+        total_loan_amount_valid && deadline_not_passed && signed_by_borrower && total_interest_amount_valid
 
       if collateral_valid {
         None
@@ -138,9 +134,7 @@ fn interest_payment_is_valid(
   ctx: ScriptContext,
   interest_script_hash: ByteArray,
   collateral_stake_hash: ByteArray,
-  loan_tx_id: TransactionId,
 ) -> Bool {
-  // same tx id, total value = value in datum, deadline has not passed 
   let validity_range: ValidityRange = ctx.transaction.validity_range
 
   let signatures: List<AddressHash> = ctx.transaction.extra_signatories
@@ -158,7 +152,6 @@ fn interest_payment_is_valid(
     get_inputs_collateral_info(
       inputs_from_collateral_validator,
       total_repay_amount,
-      loan_tx_id,
       validity_range,
       signatures,
     )
@@ -173,11 +166,7 @@ fn interest_payment_is_valid(
   info_matches
 }
 
-validator(
-  interest_script_hash: ByteArray,
-  collateral_stake_hash: ByteArray,
-  loan_tx_id: TransactionId,
-) {
+validator(interest_script_hash: ByteArray, collateral_stake_hash: ByteArray) {
   fn loan(_datum: Int, _redeemer: Int, ctx: ScriptContext) -> Bool {
     when ctx.purpose is {
       WithdrawFrom(_) ->
@@ -185,7 +174,6 @@ validator(
           ctx,
           interest_script_hash,
           collateral_stake_hash,
-          loan_tx_id,
         )
 
       _ -> False

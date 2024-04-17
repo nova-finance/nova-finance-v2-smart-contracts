@@ -116,7 +116,6 @@ fn get_outputs_collateral_info(
       expect InlineDatum(collateral_datum) = output.datum
       expect collateral_datum_typed: CollateralDatum = collateral_datum
 
-      let tx_id_valid = collateral_datum_typed.tx_id == ctx.transaction.id
       let lend_time_valid =
         collateral_datum_typed.lend_time == get_lower_bound(
           ctx.transaction.validity_range,
@@ -127,7 +126,7 @@ fn get_outputs_collateral_info(
         collateral_datum_typed.total_interest_amount == total_repay_amount.interest_amount
 
       let output_datum_valid =
-        tx_id_valid && lend_time_valid && total_loan_amount_valid && total_interest_amount_valid
+        lend_time_valid && total_loan_amount_valid && total_interest_amount_valid
 
       if output_datum_valid {
         let output_collateral_info =

@@ -1,5 +1,4 @@
 use aiken/hash.{Blake2b_224, Hash}
-use aiken/transaction.{TransactionId}
 use aiken/transaction/credential.{Script, VerificationKey}
 use aiken/transaction/value.{AssetName, PolicyId, Value}
 
@@ -38,7 +37,6 @@ pub type CollateralDatum {
   total_interest_amount: Int,
   total_loan_amount: Int,
   borrower_address_hash: AddressHash,
-  tx_id: TransactionId,
 }
 
 pub type InterestDatum {
