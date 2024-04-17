@@ -37,7 +37,6 @@ pub type CollateralDatum {
   total_interest_amount: Int,
   total_loan_amount: Int,
   borrower_address_hash: AddressHash,
-  unique_id: ByteArray,
 }
 
 pub type InterestDatum {
