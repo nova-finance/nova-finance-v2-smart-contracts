@@ -47,6 +47,7 @@ fn get_inputs_loan_info(
       expect InlineDatum(loan_offer_datum) = output.datum
       expect loan_offer_datum_typed: LoanOfferDatum = loan_offer_datum
 
+      // when we find a duplicate loan coming from the same lender, we will update the loan amount and collateral amount by summing them up
       when
         list.find(
           inputs_loan,
@@ -118,10 +119,13 @@ fn get_outputs_collateral_info(
       expect InlineDatum(collateral_datum) = output.datum
       expect collateral_datum_typed: CollateralDatum = collateral_datum
 
+      // Check the lend time in the datum is within the transaction validity range
       let lend_time_valid =
         collateral_datum_typed.lend_time == get_lower_bound(
           ctx.transaction.validity_range,
         )
+
+      // Check the total loan and interest amount in the datum is what we calculated from the outputs
       let total_loan_amount_valid =
         collateral_datum_typed.total_loan_amount == total_repay_amount.loan_amount
       let total_interest_amount_valid =
@@ -160,15 +164,22 @@ fn loan_is_valid(
   collateral_validator_hash: ByteArray,
   loan_validator_hash: ByteArray,
 ) -> Bool {
+  // Get all outputs going to the collateral validator
   let outputs_to_collateral_validator: List<Output> =
     find_script_outputs(ctx.transaction.outputs, collateral_validator_hash)
-
+  // Get all inputs coming from own validator
   let inputs_from_script_validator: List<Input> =
     get_inputs_from_script(ctx.transaction.inputs, loan_validator_hash)
 
+  // Get the total loan and interest amount the borrower must repay
   let total_repay_amount: LoanAndInterestAmount =
     get_total_repay_amount(ctx.transaction.inputs, inputs_from_script_validator)
 
+  // Construct a list of ValidateLoanInfo for all inputs coming from own validator
+  let inputs_loan_info: List<ValidateLoanInfo> =
+    get_inputs_loan_info(inputs_from_script_validator)
+
+  // Construct a list of ValidateLoanInfo for all outputs going to the loan validator
   let outputs_collateral_info: List<ValidateLoanInfo> =
     get_outputs_collateral_info(
       outputs_to_collateral_validator,
@@ -176,26 +187,21 @@ fn loan_is_valid(
       ctx,
     )
 
-  let inputs_loan_info: List<ValidateLoanInfo> =
-    get_inputs_loan_info(inputs_from_script_validator)
-
+  // Check if the loan info in the inputs matches the loan info in the outputs
   let info_difference =
     list.difference(inputs_loan_info, outputs_collateral_info)
-
   let info_matches = list.length(info_difference) == 0
   info_matches
 }
 
 validator(collateral_validator_hash: ByteArray) {
-  // Function to validate cancelling a loan
   fn spend(datum: LoanOfferDatum, _redeemer: Int, ctx: ScriptContext) -> Bool {
-    // Only the lender can cancel the loan
+    // To cancel a loan, the lender must sign the transaction
     let must_be_signed_by_lender =
       list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
     must_be_signed_by_lender
   }
 
-  // Function to validate getting a loan 
   fn withdraw(_redeemer: Int, ctx: ScriptContext) {
     expect ScriptContext { transaction: _tx, purpose: WithdrawFrom(stake_cred) } =
       ctx
