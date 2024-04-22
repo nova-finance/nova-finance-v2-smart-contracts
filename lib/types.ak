@@ -20,7 +20,6 @@ pub type LoanOfferDatum {
   collateral_asset: AssetClass,
   interest_amount: Int,
   interest_asset: AssetClass,
-  interest_percent: Int,
   loan_duration: POSIXTime,
   lender_address_hash: AddressHash,
 }
