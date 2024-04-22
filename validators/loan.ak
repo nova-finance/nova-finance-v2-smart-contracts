@@ -6,7 +6,7 @@ use aiken/transaction.{
 use aiken/transaction/credential.{Inline, ScriptCredential}
 use aiken/transaction/value.{quantity_of}
 use types.{
-  CollateralDatum, LoanAndInterestAmount, LoanOfferDatum, ValidateLoanInfo,
+  CollateralDatum, LoanAndInterestAmount, OfferLoanDatum, ValidateLoanInfo,
 }
 use utils.{get_inputs_from_script, get_lower_bound}
 
@@ -19,7 +19,7 @@ fn get_total_repay_amount(
     LoanAndInterestAmount { loan_amount: 0, interest_amount: 0 },
     fn(input: Input, acc: LoanAndInterestAmount) {
       expect InlineDatum(loan_datum) = input.output.datum
-      expect loan_datum_typed: LoanOfferDatum = loan_datum
+      expect loan_datum_typed: OfferLoanDatum = loan_datum
       let interest_amount: Int = loan_datum_typed.interest_amount
       let loan_amount: Int =
         quantity_of(
@@ -45,7 +45,7 @@ fn get_inputs_loan_info(
     fn(input, inputs_loan) {
       let output: Output = input.output
       expect InlineDatum(loan_offer_datum) = output.datum
-      expect loan_offer_datum_typed: LoanOfferDatum = loan_offer_datum
+      expect loan_offer_datum_typed: OfferLoanDatum = loan_offer_datum
 
       // when we find a duplicate loan coming from the same lender, we will update the loan amount and collateral amount by summing them up
       when
@@ -195,7 +195,7 @@ fn loan_is_valid(
 }
 
 validator(collateral_validator_hash: ByteArray) {
-  fn spend(datum: LoanOfferDatum, _redeemer: Int, ctx: ScriptContext) -> Bool {
+  fn spend(datum: OfferLoanDatum, _redeemer: Int, ctx: ScriptContext) -> Bool {
     // To cancel a loan, the lender must sign the transaction
     let must_be_signed_by_lender =
       list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
