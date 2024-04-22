@@ -13,7 +13,7 @@ pub type AssetClass {
 pub type AddressHash =
   Hash<Blake2b_224, VerificationKey>
 
-pub type LoanOfferDatum {
+pub type OfferLoanDatum {
   loan_amount: Int,
   loan_asset: AssetClass,
   collateral_amount: Int,
