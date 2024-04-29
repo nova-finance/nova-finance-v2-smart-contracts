@@ -1,6 +1,7 @@
+use aiken/dict
 use aiken/list
 use aiken/transaction.{
-  InlineDatum, Input, Output, ScriptContext, Transaction, WithdrawFrom,
+  InlineDatum, Input, Output, ScriptContext, Spend, Transaction, WithdrawFrom,
   find_script_outputs,
 }
 use aiken/transaction/credential.{Inline, ScriptCredential}
@@ -8,7 +9,16 @@ use aiken/transaction/value.{quantity_of}
 use types.{
   CollateralDatum, LoanAndInterestAmount, OfferLoanDatum, ValidateLoanInfo,
 }
-use utils.{get_inputs_from_script, get_lower_bound}
+use utils.{get_inputs_from_script, get_lower_bound, resolve_output_reference}
+
+type LoanRedeemer {
+  CancelLoan(Int)
+  GetLoan(Int)
+}
+
+type Redeemer {
+  action: LoanRedeemer,
+}
 
 fn get_total_repay_amount(
   list: List<Input>,
@@ -195,11 +205,33 @@ fn loan_is_valid(
 }
 
 validator(collateral_validator_hash: ByteArray) {
-  fn spend(datum: OfferLoanDatum, _redeemer: Int, ctx: ScriptContext) -> Bool {
-    // To cancel a loan, the lender must sign the transaction
-    let must_be_signed_by_lender =
-      list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
-    must_be_signed_by_lender
+  fn spend(
+    datum: OfferLoanDatum,
+    redeemer: Redeemer,
+    ctx: ScriptContext,
+  ) -> Bool {
+    when redeemer.action is {
+      CancelLoan(_) -> {
+        // To cancel a loan, the lender must sign the transaction
+        let must_be_signed_by_lender =
+          list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
+        must_be_signed_by_lender
+      }
+
+      GetLoan(_) -> {
+        expect ScriptContext { transaction: tx, purpose: Spend(own_ref) } = ctx
+
+        let Transaction { inputs, withdrawals, .. } = tx
+
+        let Output { address: own_addr, .. } =
+          resolve_output_reference(inputs, own_ref)
+
+        let own_withdrawal = Inline(own_addr.payment_credential)
+
+        // Arbitrary withdrawal from this script is required.
+        dict.has_key(withdrawals, own_withdrawal)
+      }
+    }
   }
 
   fn withdraw(_redeemer: Int, ctx: ScriptContext) {
