@@ -1,6 +1,7 @@
+use aiken/builtin
 use aiken/interval.{Finite}
 use aiken/list
-use aiken/transaction.{Input, Output, ValidityRange}
+use aiken/transaction.{Input, Output, OutputReference, ValidityRange}
 use aiken/transaction/credential.{
   Address, ScriptCredential, VerificationKeyCredential,
 }
@@ -24,4 +25,17 @@ pub fn get_inputs_from_script(
           }
         },
       )
+}
+
+pub fn resolve_output_reference(
+  inputs: List<Input>,
+  output_ref: OutputReference,
+) -> Output {
+  expect [input, ..] = inputs
+
+  if input.output_reference == output_ref {
+    input.output
+  } else {
+    resolve_output_reference(builtin.tail_list(inputs), output_ref)
+  }
 }
