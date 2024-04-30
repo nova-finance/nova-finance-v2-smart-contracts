@@ -1,6 +1,7 @@
+use aiken/dict
 use aiken/list
 use aiken/transaction.{
-  InlineDatum, Input, Output, ScriptContext, Transaction, ValidityRange,
+  InlineDatum, Input, Output, ScriptContext, Spend, Transaction, ValidityRange,
   WithdrawFrom, find_script_outputs,
 }
 use aiken/transaction/credential.{Inline, ScriptCredential}
@@ -9,7 +10,16 @@ use types.{
   AddressHash, CollateralDatum, InterestDatum, LoanAndInterestAmount,
   ValidateRepayInfo,
 }
-use utils.{get_inputs_from_script}
+use utils.{get_inputs_from_script, resolve_output_reference}
+
+type CollateralRedeemer {
+  LiquidateCollateral(Int)
+  RepayLoan(Int)
+}
+
+type Redeemer {
+  action: CollateralRedeemer,
+}
 
 fn get_loan_and_interest_from_output(output: Output) -> LoanAndInterestAmount {
   expect InlineDatum(interest_datum) = output.datum
@@ -177,16 +187,37 @@ fn interest_payment_is_valid(
 }
 
 validator(interest_validator_hash: ByteArray) {
-  fn spend(datum: CollateralDatum, _redeemer: Int, ctx: ScriptContext) -> Bool {
-    // To Liqudate the collateral, we need to make sure that the deadline has passed
-    // and the transaction is signed by the lender
-    let must_be_signed_by_lender =
-      list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
-    let deadline_passed =
-      datum.loan_duration + datum.lend_time < utils.get_lower_bound(
-        ctx.transaction.validity_range,
-      )
-    must_be_signed_by_lender && deadline_passed
+  fn spend(
+    datum: CollateralDatum,
+    redeemer: Redeemer,
+    ctx: ScriptContext,
+  ) -> Bool {
+    when redeemer.action is {
+      LiquidateCollateral(_) -> {
+        // To cancel a loan, the lender must sign the transaction
+        let must_be_signed_by_lender =
+          list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
+        let deadline_passed =
+          datum.loan_duration + datum.lend_time < utils.get_lower_bound(
+            ctx.transaction.validity_range,
+          )
+        must_be_signed_by_lender && deadline_passed
+      }
+
+      RepayLoan(_) -> {
+        expect ScriptContext { transaction: tx, purpose: Spend(own_ref) } = ctx
+
+        let Transaction { inputs, withdrawals, .. } = tx
+
+        let Output { address: own_addr, .. } =
+          resolve_output_reference(inputs, own_ref)
+
+        let own_withdrawal = Inline(own_addr.payment_credential)
+
+        // Arbitrary withdrawal from this script is required.
+        dict.has_key(withdrawals, own_withdrawal)
+      }
+    }
   }
 
   fn withdraw(_redeemer: Int, ctx: ScriptContext) {
