@@ -160,7 +160,6 @@ fn get_outputs_collateral_info(
             lender_address_hash: collateral_datum_typed.lender_address_hash,
             loan_duration: collateral_datum_typed.loan_duration,
           }
-
         Some(output_collateral_info)
       } else {
         None
