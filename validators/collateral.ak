@@ -107,8 +107,6 @@ fn get_inputs_collateral_info(
         total_loan_amount_valid && deadline_not_passed && signed_by_borrower && total_interest_amount_valid
 
       if collateral_valid {
-        None
-      } else {
         Some(
           ValidateRepayInfo {
             repay_loan_amount: collateral_datum_typed.total_loan_amount,
@@ -118,6 +116,8 @@ fn get_inputs_collateral_info(
             lender_address_hash: collateral_datum_typed.lender_address_hash,
           },
         )
+      } else {
+        None
       }
     },
   )
