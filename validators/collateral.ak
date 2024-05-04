@@ -44,6 +44,7 @@ fn get_loan_and_interest_from_output(output: Output) -> LoanAndInterestAmount {
         interest_amount: total_asset_amount - interest_datum_typed.repay_loan_amount,
       }
     }
+
     False ->
       LoanAndInterestAmount {
         loan_amount: quantity_of(
@@ -99,12 +100,12 @@ fn get_inputs_collateral_info(
         collateral_datum_typed.lend_time + collateral_datum_typed.loan_duration > utils.get_lower_bound(
           validity_range,
         )
-      // Only the original borrower can repay the loan
+
+      // // Only the original borrower can repay the loan
       let signed_by_borrower =
         list.has(signatures, collateral_datum_typed.borrower_address_hash)
-
       let collateral_valid =
-        total_loan_amount_valid && deadline_not_passed && signed_by_borrower && total_interest_amount_valid
+        deadline_not_passed && signed_by_borrower && total_interest_amount_valid && total_loan_amount_valid
 
       if collateral_valid {
         Some(
@@ -134,7 +135,6 @@ fn get_outputs_interest_info(
 
       let loan_and_interest_amount: LoanAndInterestAmount =
         get_loan_and_interest_from_output(output)
-
       ValidateRepayInfo {
         repay_loan_amount: loan_and_interest_amount.loan_amount,
         repay_loan_asset: interest_datum_typed.repay_loan_asset,
@@ -181,7 +181,7 @@ fn interest_payment_is_valid(
 
   // Check if inputs info and outputs info match
   let info_difference =
-    list.difference(inputs_collateral_info, outputs_interest_info)
+    list.difference(outputs_interest_info, inputs_collateral_info)
   let info_matches = list.length(info_difference) == 0
   info_matches
 }
@@ -214,7 +214,6 @@ validator(interest_validator_hash: ByteArray) {
 
         let own_withdrawal = Inline(own_addr.payment_credential)
 
-        // Arbitrary withdrawal from this script is required.
         dict.has_key(withdrawals, own_withdrawal)
       }
     }
