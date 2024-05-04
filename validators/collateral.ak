@@ -183,7 +183,10 @@ fn interest_payment_is_valid(
   let info_difference =
     list.difference(outputs_interest_info, inputs_collateral_info)
   let info_matches = list.length(info_difference) == 0
-  info_matches
+
+  let length_matches =
+    list.length(outputs_interest_info) == list.length(inputs_collateral_info)
+  info_matches && length_matches
 }
 
 validator(interest_validator_hash: ByteArray) {

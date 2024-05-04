@@ -200,7 +200,10 @@ fn loan_is_valid(
   let info_difference =
     list.difference(inputs_loan_info, outputs_collateral_info)
   let info_matches = list.length(info_difference) == 0
-  info_matches
+
+  let length_matches =
+    list.length(inputs_loan_info) == list.length(outputs_collateral_info)
+  info_matches && length_matches
 }
 
 validator(collateral_validator_hash: ByteArray) {
