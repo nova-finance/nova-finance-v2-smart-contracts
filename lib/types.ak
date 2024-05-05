@@ -60,6 +60,7 @@ pub type ValidateLoanInfo {
   interest_asset: AssetClass,
   lender_address_hash: AddressHash,
   loan_duration: POSIXTime,
+  ada_amount: Int,
 }
 
 pub type ValidateRepayInfo {
