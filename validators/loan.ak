@@ -84,6 +84,7 @@ fn get_inputs_loan_info(
               lovelace_amount: duplicate_loan.lovelace_amount + lovelace_of(
                 output.value,
               ),
+              liquidation_policy: loan_offer_datum_typed.liquidation_policy,
             }
 
           let removed_duplicate_collateral_list =
@@ -113,6 +114,7 @@ fn get_inputs_loan_info(
               lender_address_hash: loan_offer_datum_typed.lender_address_hash,
               loan_duration: loan_offer_datum_typed.loan_duration,
               lovelace_amount: lovelace_of(output.value),
+              liquidation_policy: loan_offer_datum_typed.liquidation_policy,
             }
 
           [input_loan_info, ..inputs_loan]
@@ -164,6 +166,7 @@ fn get_outputs_collateral_info(
             lender_address_hash: collateral_datum_typed.lender_address_hash,
             loan_duration: collateral_datum_typed.loan_duration,
             lovelace_amount: lovelace_of(output.value),
+            liquidation_policy: collateral_datum_typed.liquidation_policy,
           }
         Some(output_collateral_info)
       } else {

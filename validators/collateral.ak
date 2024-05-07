@@ -5,7 +5,7 @@ use aiken/transaction.{
   WithdrawFrom, find_script_outputs,
 }
 use aiken/transaction/credential.{Inline, ScriptCredential}
-use aiken/transaction/value.{quantity_of}
+use aiken/transaction/value.{AssetName, from_minted_value, quantity_of}
 use types.{
   AddressHash, CollateralDatum, InterestDatum, LoanAndInterestAmount,
   ValidateRepayInfo,
@@ -13,7 +13,7 @@ use types.{
 use utils.{get_inputs_from_script, resolve_output_reference}
 
 type CollateralRedeemer {
-  LiquidateCollateral(Int)
+  LiquidateCollateral(AssetName)
   RepayLoan(Int)
 }
 
@@ -179,7 +179,7 @@ fn interest_payment_is_valid(
   let outputs_interest_info: List<ValidateRepayInfo> =
     get_outputs_interest_info(outputs_to_interest_validator)
 
-  // Check if inputs info and outputs info match
+  // Check if inputs info and outputs info match thereby validating the interest payment
   let info_difference =
     list.difference(outputs_interest_info, inputs_collateral_info)
   let info_matches = list.length(info_difference) == 0
@@ -189,6 +189,29 @@ fn interest_payment_is_valid(
   info_matches && length_matches
 }
 
+fn liquidate_collateral_valid(
+  ctx: ScriptContext,
+  datum: CollateralDatum,
+  oracle_tn: AssetName,
+) -> Bool {
+  // To cancel a loan, the lender must sign the transaction and the deadline must have passed
+  // or the collateral is under collateralized 
+  let must_be_signed_by_lender =
+    list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
+  let deadline_passed =
+    datum.loan_duration + datum.lend_time < utils.get_lower_bound(
+      ctx.transaction.validity_range,
+    )
+
+  let oracle_token_minted =
+    utils.validate_token_mint(
+      from_minted_value(ctx.transaction.mint),
+      (datum.liquidation_policy, oracle_tn, 1),
+    )
+
+  must_be_signed_by_lender && deadline_passed || oracle_token_minted
+}
+
 validator(interest_validator_hash: ByteArray) {
   fn spend(
     datum: CollateralDatum,
@@ -196,16 +219,8 @@ validator(interest_validator_hash: ByteArray) {
     ctx: ScriptContext,
   ) -> Bool {
     when redeemer.action is {
-      LiquidateCollateral(_) -> {
-        // To cancel a loan, the lender must sign the transaction
-        let must_be_signed_by_lender =
-          list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
-        let deadline_passed =
-          datum.loan_duration + datum.lend_time < utils.get_lower_bound(
-            ctx.transaction.validity_range,
-          )
-        must_be_signed_by_lender && deadline_passed
-      }
+      LiquidateCollateral(oracle_tn) ->
+        liquidate_collateral_valid(ctx, datum, oracle_tn)
 
       RepayLoan(_) -> {
         expect ScriptContext { transaction: tx, purpose: Spend(own_ref) } = ctx

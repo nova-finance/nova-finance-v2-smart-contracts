@@ -22,6 +22,7 @@ pub type OfferLoanDatum {
   interest_asset: AssetClass,
   loan_duration: POSIXTime,
   lender_address_hash: AddressHash,
+  liquidation_policy: PolicyId,
 }
 
 pub type CollateralDatum {
@@ -36,6 +37,7 @@ pub type CollateralDatum {
   total_interest_amount: Int,
   total_loan_amount: Int,
   borrower_address_hash: AddressHash,
+  liquidation_policy: PolicyId,
 }
 
 pub type InterestDatum {
@@ -61,6 +63,7 @@ pub type ValidateLoanInfo {
   lender_address_hash: AddressHash,
   loan_duration: POSIXTime,
   lovelace_amount: Int,
+  liquidation_policy: PolicyId,
 }
 
 pub type ValidateRepayInfo {
