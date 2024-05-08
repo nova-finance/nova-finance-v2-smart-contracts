@@ -242,6 +242,7 @@ validator(interest_validator_hash: ByteArray) {
       ctx
 
     expect Inline(ScriptCredential(collateral_validator_hash)) = stake_cred
+    trace @"Collateral Validator: Withdraw"
     interest_payment_is_valid(
       ctx,
       interest_validator_hash,
