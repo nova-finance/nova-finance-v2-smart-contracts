@@ -23,6 +23,7 @@ pub type OfferLoanDatum {
   loan_duration: POSIXTime,
   lender_address_hash: AddressHash,
   liquidation_policy: PolicyId,
+  collateral_factor: Int,
 }
 
 pub type CollateralDatum {
@@ -38,6 +39,7 @@ pub type CollateralDatum {
   total_loan_amount: Int,
   borrower_address_hash: AddressHash,
   liquidation_policy: PolicyId,
+  collateral_factor: Int,
 }
 
 pub type InterestDatum {
@@ -64,6 +66,7 @@ pub type ValidateLoanInfo {
   loan_duration: POSIXTime,
   lovelace_amount: Int,
   liquidation_policy: PolicyId,
+  collateral_factor: Int,
 }
 
 pub type ValidateRepayInfo {
