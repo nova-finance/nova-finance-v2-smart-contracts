@@ -7,7 +7,8 @@ use aiken/transaction.{
 use aiken/transaction/credential.{Inline, ScriptCredential}
 use aiken/transaction/value.{lovelace_of, quantity_of}
 use types.{
-  CollateralDatum, LoanAndInterestAmount, OfferLoanDatum, ValidateLoanInfo,
+  AssetClass, CollateralDatum, LoanAndInterestAmount, OfferLoanDatum,
+  ValidateLoanInfo,
 }
 use utils.{get_inputs_from_script, get_lower_bound, resolve_output_reference}
 
@@ -18,6 +19,18 @@ type LoanRedeemer {
 
 type Redeemer {
   action: LoanRedeemer,
+}
+
+pub fn get_input_lovelace_amount(
+  output: Output,
+  loan_asset: AssetClass,
+  amount: Int,
+) -> Int {
+  if loan_asset.policy_id == "" {
+    amount
+  } else {
+    lovelace_of(output.value)
+  }
 }
 
 fn get_total_repay_amount(
@@ -81,8 +94,10 @@ fn get_inputs_loan_info(
               interest_asset: loan_offer_datum_typed.interest_asset,
               lender_address_hash: loan_offer_datum_typed.lender_address_hash,
               loan_duration: loan_offer_datum_typed.loan_duration,
-              lovelace_amount: duplicate_loan.lovelace_amount + lovelace_of(
-                output.value,
+              lovelace_amount: duplicate_loan.lovelace_amount + get_input_lovelace_amount(
+                output,
+                loan_offer_datum_typed.loan_asset,
+                loan_offer_datum_typed.collateral_amount,
               ),
               liquidation_policy: loan_offer_datum_typed.liquidation_policy,
               collateral_factor: loan_offer_datum_typed.collateral_factor,
@@ -114,7 +129,11 @@ fn get_inputs_loan_info(
               interest_asset: loan_offer_datum_typed.interest_asset,
               lender_address_hash: loan_offer_datum_typed.lender_address_hash,
               loan_duration: loan_offer_datum_typed.loan_duration,
-              lovelace_amount: lovelace_of(output.value),
+              lovelace_amount: get_input_lovelace_amount(
+                output,
+                loan_offer_datum_typed.loan_asset,
+                loan_offer_datum_typed.collateral_amount,
+              ),
               liquidation_policy: loan_offer_datum_typed.liquidation_policy,
               collateral_factor: loan_offer_datum_typed.collateral_factor,
             }
@@ -148,9 +167,11 @@ fn get_outputs_collateral_info(
         collateral_datum_typed.total_loan_amount == total_repay_amount.loan_amount
       let total_interest_amount_valid =
         collateral_datum_typed.total_interest_amount == total_repay_amount.interest_amount
+      let loan_and_asset_same =
+        collateral_datum_typed.loan_asset == collateral_datum_typed.interest_asset
 
       let output_datum_valid =
-        lend_time_valid && total_loan_amount_valid && total_interest_amount_valid
+        lend_time_valid && total_loan_amount_valid && total_interest_amount_valid && loan_and_asset_same
 
       if output_datum_valid {
         let output_collateral_info =
