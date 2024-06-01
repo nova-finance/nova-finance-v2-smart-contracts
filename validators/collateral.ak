@@ -9,7 +9,7 @@ use aiken/transaction/value.{
   AssetName, from_minted_value, lovelace_of, quantity_of,
 }
 use types.{
-  AddressHash, CollateralDatum, InterestDatum, LoanAndInterestAmount,
+  AddressHash, AssetClass, CollateralDatum, InterestDatum, LoanAndInterestAmount,
   ValidateRepayInfo,
 }
 use utils.{get_inputs_from_script, resolve_output_reference}
@@ -21,6 +21,18 @@ type CollateralRedeemer {
 
 type Redeemer {
   action: CollateralRedeemer,
+}
+
+pub fn get_input_lovelace_amount(
+  output: Output,
+  loan_asset: AssetClass,
+  amount: Int,
+) -> Int {
+  if loan_asset.policy_id == "" {
+    lovelace_of(output.value) + amount
+  } else {
+    lovelace_of(output.value)
+  }
 }
 
 fn get_loan_and_interest_from_output(output: Output) -> LoanAndInterestAmount {
@@ -109,6 +121,12 @@ fn get_inputs_collateral_info(
       let collateral_valid =
         deadline_not_passed && signed_by_borrower && total_interest_amount_valid && total_loan_amount_valid
 
+      let input_lovelace_amount =
+        get_input_lovelace_amount(
+          input_from_collateral_validator.output,
+          collateral_datum_typed.loan_asset,
+          collateral_datum_typed.interest_amount,
+        )
       if collateral_valid {
         Some(
           ValidateRepayInfo {
@@ -117,9 +135,7 @@ fn get_inputs_collateral_info(
             repay_interest_amount: collateral_datum_typed.total_interest_amount,
             repay_interest_asset: collateral_datum_typed.interest_asset,
             lender_address_hash: collateral_datum_typed.lender_address_hash,
-            lovelace_amount: lovelace_of(
-              input_from_collateral_validator.output.value,
-            ),
+            lovelace_amount: input_lovelace_amount,
           },
         )
       } else {
