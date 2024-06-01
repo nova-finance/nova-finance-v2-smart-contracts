@@ -75,6 +75,7 @@ pub type ValidateRepayInfo {
   repay_interest_amount: Int,
   repay_interest_asset: AssetClass,
   lender_address_hash: AddressHash,
+  lovelace_amount: Int,
 }
 
 pub type ValidatorHash =

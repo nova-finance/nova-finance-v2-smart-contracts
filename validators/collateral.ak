@@ -5,7 +5,9 @@ use aiken/transaction.{
   WithdrawFrom, find_script_outputs,
 }
 use aiken/transaction/credential.{Inline, ScriptCredential}
-use aiken/transaction/value.{AssetName, from_minted_value, quantity_of}
+use aiken/transaction/value.{
+  AssetName, from_minted_value, lovelace_of, quantity_of,
+}
 use types.{
   AddressHash, CollateralDatum, InterestDatum, LoanAndInterestAmount,
   ValidateRepayInfo,
@@ -115,6 +117,9 @@ fn get_inputs_collateral_info(
             repay_interest_amount: collateral_datum_typed.total_interest_amount,
             repay_interest_asset: collateral_datum_typed.interest_asset,
             lender_address_hash: collateral_datum_typed.lender_address_hash,
+            lovelace_amount: lovelace_of(
+              input_from_collateral_validator.output.value,
+            ),
           },
         )
       } else {
@@ -141,6 +146,7 @@ fn get_outputs_interest_info(
         repay_interest_amount: loan_and_interest_amount.interest_amount,
         repay_interest_asset: interest_datum_typed.repay_interest_asset,
         lender_address_hash: interest_datum_typed.lender_address_hash,
+        lovelace_amount: lovelace_of(output.value),
       }
     },
   )
