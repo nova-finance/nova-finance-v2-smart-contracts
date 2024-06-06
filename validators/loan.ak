@@ -10,7 +10,10 @@ use types.{
   AssetClass, CollateralDatum, LoanAndInterestAmount, OfferLoanDatum,
   ValidateLoanInfo,
 }
-use utils.{get_inputs_from_script, get_lower_bound, resolve_output_reference}
+use utils.{
+  get_inputs_from_script, get_lower_bound, resolve_output_reference,
+  transaction_signed,
+}
 
 type LoanRedeemer {
   CancelLoan(Int)
@@ -70,7 +73,6 @@ fn get_inputs_loan_info(
       expect InlineDatum(loan_offer_datum) = output.datum
       expect loan_offer_datum_typed: OfferLoanDatum = loan_offer_datum
 
-      // when we find a duplicate loan coming from the same lender, we will update the loan amount and collateral amount by summing them up
       when
         list.find(
           inputs_loan,
@@ -156,20 +158,16 @@ fn get_outputs_collateral_info(
       expect InlineDatum(collateral_datum) = output.datum
       expect collateral_datum_typed: CollateralDatum = collateral_datum
 
-      // Check the lend time in the datum is within the transaction validity range
       let lend_time_valid =
         collateral_datum_typed.lend_time == get_lower_bound(
           ctx.transaction.validity_range,
         )
-
-      // Check the total loan and interest amount in the datum is what we calculated from the outputs
       let total_loan_amount_valid =
         collateral_datum_typed.total_loan_amount == total_repay_amount.loan_amount
       let total_interest_amount_valid =
         collateral_datum_typed.total_interest_amount == total_repay_amount.interest_amount
       let loan_and_asset_same =
         collateral_datum_typed.loan_asset == collateral_datum_typed.interest_asset
-
       let output_datum_valid =
         lend_time_valid && total_loan_amount_valid && total_interest_amount_valid && loan_and_asset_same
 
@@ -206,22 +204,18 @@ fn loan_is_valid(
   collateral_validator_hash: ByteArray,
   loan_validator_hash: ByteArray,
 ) -> Bool {
-  // Get all outputs going to the collateral validator
   let outputs_to_collateral_validator: List<Output> =
     find_script_outputs(ctx.transaction.outputs, collateral_validator_hash)
-  // Get all inputs coming from own validator
+
   let inputs_from_script_validator: List<Input> =
     get_inputs_from_script(ctx.transaction.inputs, loan_validator_hash)
 
-  // Get the total loan and interest amount the borrower must repay
   let total_repay_amount: LoanAndInterestAmount =
     get_total_repay_amount(ctx.transaction.inputs, inputs_from_script_validator)
 
-  // Construct a list of ValidateLoanInfo for all inputs coming from own validator
   let inputs_loan_info: List<ValidateLoanInfo> =
     get_inputs_loan_info(inputs_from_script_validator)
 
-  // Construct a list of ValidateLoanInfo for all outputs going to the loan validator
   let outputs_collateral_info: List<ValidateLoanInfo> =
     get_outputs_collateral_info(
       outputs_to_collateral_validator,
@@ -229,11 +223,9 @@ fn loan_is_valid(
       ctx,
     )
 
-  // Check if the loan info in the inputs matches the loan info in the outputs
   let info_difference =
     list.difference(inputs_loan_info, outputs_collateral_info)
   let info_matches = list.length(info_difference) == 0
-
   let length_matches =
     list.length(inputs_loan_info) == list.length(outputs_collateral_info)
 
@@ -247,12 +239,7 @@ validator(collateral_validator_hash: ByteArray) {
     ctx: ScriptContext,
   ) -> Bool {
     when redeemer.action is {
-      CancelLoan(_) -> {
-        // To cancel a loan, the lender must sign the transaction
-        let must_be_signed_by_lender =
-          list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
-        must_be_signed_by_lender
-      }
+      CancelLoan(_) -> transaction_signed(ctx, datum.lender_address_hash)
 
       GetLoan(_) -> {
         expect ScriptContext { transaction: tx, purpose: Spend(own_ref) } = ctx
@@ -264,7 +251,6 @@ validator(collateral_validator_hash: ByteArray) {
 
         let own_withdrawal = Inline(own_addr.payment_credential)
 
-        // Arbitrary withdrawal from this script is required.
         dict.has_key(withdrawals, own_withdrawal)
       }
     }
