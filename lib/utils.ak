@@ -2,11 +2,14 @@ use aiken/builtin
 use aiken/dict
 use aiken/interval.{Finite}
 use aiken/list
-use aiken/transaction.{Input, Output, OutputReference, ValidityRange}
+use aiken/transaction.{
+  Input, Output, OutputReference, ScriptContext, ValidityRange,
+}
 use aiken/transaction/credential.{
   Address, ScriptCredential, VerificationKeyCredential,
 }
 use aiken/transaction/value.{PolicyId, Value, flatten, tokens}
+use types.{AddressHash}
 
 pub fn get_lower_bound(range: ValidityRange) -> Int {
   expect Finite(lower_bound) = range.lower_bound.bound_type
@@ -59,4 +62,10 @@ pub fn resolve_output_reference(
   } else {
     resolve_output_reference(builtin.tail_list(inputs), output_ref)
   }
+}
+
+pub fn transaction_signed(ctx: ScriptContext, hash: AddressHash) -> Bool {
+  let must_be_signed_by_lender =
+    list.has(ctx.transaction.extra_signatories, hash)
+  must_be_signed_by_lender
 }

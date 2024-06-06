@@ -41,9 +41,6 @@ fn get_loan_and_interest_from_output(output: Output) -> LoanAndInterestAmount {
   let loan_and_interest_asset_same =
     interest_datum_typed.repay_loan_asset == interest_datum_typed.repay_interest_asset
 
-  // If loan and interest asset is the same then we get the total amount in that UTxO
-  // and subtract it with the amount specified in the datum to get the loan and interest amount
-  // If they are different then we just get each asset amount from the UTxO
   when loan_and_interest_asset_same is {
     True -> {
       let total_asset_amount =
@@ -104,30 +101,28 @@ fn get_inputs_collateral_info(
       expect InlineDatum(collateral_datum) =
         input_from_collateral_validator.output.datum
       expect collateral_datum_typed: CollateralDatum = collateral_datum
-      // Check total loan amount and interest in the datum is same as what we got from looking at the outputs 
+
       let total_loan_amount_valid =
         total_repaid_amount.loan_amount == collateral_datum_typed.total_loan_amount
       let total_interest_amount_valid =
         total_repaid_amount.interest_amount == collateral_datum_typed.total_interest_amount
-      // Make sure deadline has not passed and they can still repay the laon
       let deadline_not_passed =
         collateral_datum_typed.lend_time + collateral_datum_typed.loan_duration > utils.get_lower_bound(
           validity_range,
         )
-
-      // // Only the original borrower can repay the loan
       let signed_by_borrower =
         list.has(signatures, collateral_datum_typed.borrower_address_hash)
       let collateral_valid =
         deadline_not_passed && signed_by_borrower && total_interest_amount_valid && total_loan_amount_valid
 
-      let input_lovelace_amount =
-        get_input_lovelace_amount(
-          input_from_collateral_validator.output,
-          collateral_datum_typed.loan_asset,
-          collateral_datum_typed.interest_amount,
-        )
       if collateral_valid {
+        let input_lovelace_amount =
+          get_input_lovelace_amount(
+            input_from_collateral_validator.output,
+            collateral_datum_typed.loan_asset,
+            collateral_datum_typed.interest_amount,
+          )
+
         Some(
           ValidateRepayInfo {
             repay_loan_amount: collateral_datum_typed.total_loan_amount,
@@ -177,19 +172,15 @@ fn interest_payment_is_valid(
 
   let signatures: List<AddressHash> = ctx.transaction.extra_signatories
 
-  // Get all outputs going to interest validator
   let outputs_to_interest_validator: List<Output> =
     find_script_outputs(ctx.transaction.outputs, interest_validator_hash)
 
-  // Get all inputs coming from own validator 
   let inputs_from_collateral_validator: List<Input> =
     get_inputs_from_script(ctx.transaction.inputs, collateral_validator_hash)
 
-  // Get total interest amount and total loan amount going to interest validator
   let total_repay_amount: LoanAndInterestAmount =
     get_total_repay_loan_and_interest_amount(outputs_to_interest_validator)
 
-  // Construct a list of ValidateRepayInfo for inputs coming own validator
   let inputs_collateral_info: List<ValidateRepayInfo> =
     get_inputs_collateral_info(
       inputs_from_collateral_validator,
@@ -197,11 +188,9 @@ fn interest_payment_is_valid(
       validity_range,
       signatures,
     )
-  // Construct a list of ValidateRepayInfo for outputs going to interest validator
   let outputs_interest_info: List<ValidateRepayInfo> =
     get_outputs_interest_info(outputs_to_interest_validator)
 
-  // Check if inputs info and outputs info match thereby validating the interest payment
   let info_difference =
     list.difference(outputs_interest_info, inputs_collateral_info)
   let info_matches = list.length(info_difference) == 0
@@ -216,8 +205,6 @@ fn liquidate_collateral_valid(
   datum: CollateralDatum,
   oracle_tn: AssetName,
 ) -> Bool {
-  // To cancel a loan, the lender must sign the transaction and the deadline must have passed
-  // or the collateral is under collateralized 
   let must_be_signed_by_lender =
     list.has(ctx.transaction.extra_signatories, datum.lender_address_hash)
   let deadline_passed =
